@@ -22,8 +22,6 @@ const getConversation = () => {
         messages.push({ type: messageType, text: messageText });
       }
     });
-
-    console.log('messages every 30 second::', messages);
   
     chrome.storage.local.get(["senderTab"]).then((result) => {
       const tabId = result.senderTab;
@@ -139,6 +137,12 @@ function performOperationsInTab() {
 
             chrome.storage.local.get(["senderTab"]).then((result) => {
               const tabId = result.senderTab;
+
+              chrome.runtime.sendMessage({
+                type: "getCurrentConversation",
+                tabId,
+              });
+              
               chrome.runtime.sendMessage({
                 type: "activateAndExecuteScript",
                 tabId,
@@ -166,8 +170,9 @@ chrome.webRequest.onBeforeRequest.addListener(
       const dataArray = data.split("&");
       const vehicle = dataArray[0]?.replace("vehicle=", "");
       const user = dataArray[1]?.replace("user=", "");
-      const message = dataArray[2]?.replace("message=", "");
-      const url = dataArray[3]?.replace("url=", "");
+      const seller = dataArray[2]?.replace("seller=", "");
+      const message = dataArray[3]?.replace("message=", "");
+      const url = dataArray[4]?.replace("url=", "");
 
       chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
         const currentTabId = tabs[0].id;
@@ -182,6 +187,7 @@ chrome.webRequest.onBeforeRequest.addListener(
               chrome.storage.local.set({
                 initialMessage: message,
                 vehicle,
+                seller,
                 user,
                 receiverTab: tab.id
               });
@@ -206,6 +212,7 @@ chrome.webRequest.onBeforeRequest.addListener(
             chrome.storage.local.set({
               initialMessage: message,
               vehicle,
+              seller,
               user
             });
 
@@ -235,13 +242,14 @@ chrome.webRequest.onBeforeRequest.addListener(
 );
 
 
-function sendResponseToOrigin(conversation, vehicleId, userId) {
+function sendResponseToOrigin(conversation, vehicleId, userId, seller) {
   const button = document.getElementsByClassName(
     "facebook-message-loading-button"
   )[0];
   button.setAttribute("data-conversation", JSON.stringify(conversation));
   button.setAttribute("data-vehicle-id", JSON.stringify(vehicleId));
   button.setAttribute("data-user-id", JSON.stringify(userId));
+  button.setAttribute("data-seller-name", JSON.stringify(seller));
   button.click();
 }
 
@@ -250,14 +258,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const tabId = message.tabId;
     const conversation = message.conversation;
 
-    chrome.storage.local.get(['vehicle', 'user']).then((result) => {
+    chrome.storage.local.get(['vehicle', 'user', 'seller']).then((result) => {
       const vehicleId = result.vehicle;
       const userId = result.user;
+      const seller = result.seller;
+      console.log(`this is the conversation this 30's vehicle: ${vehicleId} userId: ${userId} seller: ${seller} conversation: ${conversation}`)
       chrome.tabs.update(tabId, { }, () => {
         chrome.scripting.executeScript({
           target: { tabId },
           function: sendResponseToOrigin,
-          args: [conversation, vehicleId, userId],
+          args: [conversation, vehicleId, userId, seller],
         });
       });
     });
