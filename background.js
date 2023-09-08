@@ -1,8 +1,10 @@
 const envVariables = {
   CHROME_EXTENSION_FRONT_URL: "http://localhost:3000/",
   MESSENGER_MARKETPLACE: "https://www.messenger.com/marketplace/",
-  // Dev url CHROME_EXTENSION_FRONT_URL: 'https://app-dev.vettx.com/?vehicle',
+  // Dev url CHROME_EXTENSION_FRONT_URL: 'https://app-dev.vettx.com/',
 };
+
+chrome.storage.local.set({ envVariables });
 
 const checkNewMessages = async () => {
   console.log('checking new messages');
@@ -584,6 +586,22 @@ chrome.webRequest.onBeforeRequest.addListener(
           }
         }
       });
+    } else if (
+      details.url.startsWith(
+        `${envVariables.CHROME_EXTENSION_FRONT_URL}?keepAlive`
+      )
+    ) {
+      chrome.tabs.query({}, (tabs) => {
+        for (const tab of tabs) {
+          if (tab.url.startsWith(envVariables.CHROME_EXTENSION_FRONT_URL)) {
+            chrome.storage.local.set({ senderTab: tab.id });
+            chrome.scripting.executeScript({
+              target: { tabId: tab.id },
+              function: saveChromeExtensionState,
+            });
+          }
+        }
+      });
     }
   },
   { urls: ["<all_urls>"] }
@@ -591,10 +609,16 @@ chrome.webRequest.onBeforeRequest.addListener(
 
 chrome.runtime.onInstalled.addListener(function () {
   let tabFound = false;
+  let vettxTabFound = false;
   chrome.tabs.query({}, (tabs) => {
     for (const tab of tabs) {
       if (tab.url.startsWith(envVariables.CHROME_EXTENSION_FRONT_URL)) {
         chrome.storage.local.set({ senderTab: tab.id });
+        chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          function: saveChromeExtensionState,
+        });
+        vettxTabFound = true;
       }
       if (tab.url.startsWith(envVariables.MESSENGER_MARKETPLACE)) {
         chrome.storage.local.set({ messengerTabId: tab.id });
@@ -621,8 +645,51 @@ chrome.runtime.onInstalled.addListener(function () {
         }
       );
     }
+    if (!vettxTabFound) {
+      chrome.tabs.create(
+        { url: envVariables.CHROME_EXTENSION_FRONT_URL, active: false },
+        (tab) => {
+          chrome.storage.local.set({
+            senderTab: tab.id,
+          });
+
+          chrome.tabs.onUpdated.addListener(function listener(
+            tabId,
+            changeInfo
+          ) {
+            if (changeInfo.status === "complete" && tabId === tab.id) {
+              chrome.tabs.onUpdated.removeListener(listener);
+            }
+          });
+        }
+      );
+    }
   });
 });
+
+const saveChromeExtensionState = () => {
+  chrome.storage.local.set({
+    initialized: true,
+    vettxOpened: true,
+  });
+  window.postMessage({ type: 'vettx-chrome-extension-installed' }, '*');
+}
+
+const onEnableChromeExtension = () => {
+  window.postMessage({ type: 'vettx-chrome-extension-enabled' }, '*');
+}
+
+const onDisableChromeExtension = () => {
+  window.postMessage({ type: 'vettx-chrome-extension-disabled' }, '*');
+}
+
+const onMessengerClosed = () => {
+  window.postMessage({ type: 'messenger-tab-closed' }, '*');
+}
+
+const onVettxTabClosed = () => {
+  console.log('closed vettx tab');
+}
 
 function sendResponseToOrigin(
   conversation,
@@ -671,6 +738,30 @@ function sendConversations(conversation) {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.message === "messenger-tab-closed") {
+    chrome.tabs.query({ url: `${envVariables.CHROME_EXTENSION_FRONT_URL}*` }, (tabs) => {
+    chrome.scripting.executeScript({
+            target: { tabId: tabs[0].id },
+            function: onDisableChromeExtension,
+          });
+    });
+  }
+  if (message.message === "enable-vettx-extension") {
+    chrome.tabs.query({ url: `${envVariables.CHROME_EXTENSION_FRONT_URL}*` }, (tabs) => {
+    chrome.scripting.executeScript({
+            target: { tabId: tabs[0].id },
+            function: onEnableChromeExtension,
+          });
+    });
+  }
+  if (message.message === "disable-vettx-extension") {
+    chrome.tabs.query({ url: `${envVariables.CHROME_EXTENSION_FRONT_URL}*` }, (tabs) => {
+    chrome.scripting.executeScript({
+            target: { tabId: tabs[0].id },
+            function: onDisableChromeExtension,
+          });
+    });
+  }
   if (message.type === "saveSendMessages") {
     const tabId = message.tabId;
     const conversation = message.conversation;
@@ -739,6 +830,37 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     });
   }
 });
+
+ chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
+  chrome.storage.local.get(["messengerTabId", "senderTab"]).then((result) => {
+    if (result.messengerTabId) {
+      const messengerTabId = result.messengerTabId;
+      const senderTab = result.senderTab;
+      if (messengerTabId === tabId) {
+        chrome.tabs.query({ url: `${envVariables.CHROME_EXTENSION_FRONT_URL}*` }, (tabs) => {
+          chrome.scripting.executeScript({
+                  target: { tabId: tabs[0].id },
+                  function: onMessengerClosed,
+                });
+          });
+        } else if(senderTab === tabId) {
+          chrome.windows.create({
+            type: 'popup',
+            url: 'error.html',
+            width: 300,
+            height: 200,
+        });
+          chrome.action.setPopup({ popup: "popup.html" });
+          chrome.tabs.query({ url: `${envVariables.MESSENGER_MARKETPLACE}*` }, (tabs) => {
+            chrome.scripting.executeScript({
+                    target: { tabId: tabs[0].id },
+                    function: onVettxTabClosed,
+                  });
+            });
+        } else{console.log('not the same')}
+        }else{}  
+    });
+  });
 
 function performTaskOnTab() {
   chrome.storage.local.get(["messengerTabId"]).then((result) => {

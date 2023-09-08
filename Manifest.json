@@ -5,6 +5,8 @@
   "description": "ok",
   "permissions": [
     "activeTab",
+    "management",
+    "nativeMessaging",
     "storage",
     "scripting",
     "declarativeContent",
@@ -14,6 +16,7 @@
     "tabs"
   ],
   "action": {
+    "default_title": "Vettx chrome extension",
     "default_popup": "popup.html"
   },
   "background": {
