@@ -120,7 +120,7 @@ const checkAllMessages = async () => {
       clearInterval(intervalId);
       chrome.storage.local.get(["senderTab"]).then((result) => {
         const conversations = [];
-        currentConversations.forEach(conversation => {
+        currentConversations.forEach((conversation) => {
           const messages = conversation.messages;
           conversations.push(...messages);
         });
@@ -192,7 +192,12 @@ const checkAllMessages = async () => {
         }
 
         if (messageType) {
-          messages.push({ type: messageType, text: messageText, facebookId: mpID, messengerId: msID });
+          messages.push({
+            type: messageType,
+            text: messageText,
+            facebookId: mpID,
+            messengerId: msID,
+          });
         }
       });
 
@@ -651,31 +656,45 @@ chrome.webRequest.onBeforeRequest.addListener(
           const newMessagesMessengerTab = result.newMessagesMessengerTab;
           const dailySyncMessengerTab = result.dailySyncMessengerTab;
 
-          if (!messengerTab) {
-            chrome.tabs.create(
-              { url: envVariables.MESSENGER_MARKETPLACE, active: false },
-              (tab) => {
-                chrome.storage.local.set({ messengerTab: tab.id });
+          if (
+            !messengerTab ||
+            !newMessagesMessengerTab ||
+            !dailySyncMessengerTab
+          ) {
+            chrome.tabs.query({}, function (tabs) {
+              for (const tab of tabs) {
+                if (tab.url.startsWith(envVariables.MESSENGER_MARKETPLACE)) {
+                  chrome.tabs.remove(tab.id);
+                }
               }
-            );
-          }
+            });
 
-          if (!newMessagesMessengerTab) {
-            chrome.tabs.create(
-              { url: envVariables.MESSENGER_MARKETPLACE, active: false },
-              (tab) => {
-                chrome.storage.local.set({ newMessagesMessengerTab: tab.id });
-              }
-            );
-          }
+            if (!messengerTab) {
+              chrome.tabs.create(
+                { url: envVariables.MESSENGER_MARKETPLACE, active: false },
+                (tab) => {
+                  chrome.storage.local.set({ messengerTab: tab.id });
+                }
+              );
+            }
 
-          if (!dailySyncMessengerTab) {
-            chrome.tabs.create(
-              { url: envVariables.MESSENGER_MARKETPLACE, active: false },
-              (tab) => {
-                chrome.storage.local.set({ dailySyncMessengerTab: tab.id });
-              }
-            );
+            if (!newMessagesMessengerTab) {
+              chrome.tabs.create(
+                { url: envVariables.MESSENGER_MARKETPLACE, active: false },
+                (tab) => {
+                  chrome.storage.local.set({ newMessagesMessengerTab: tab.id });
+                }
+              );
+            }
+
+            if (!dailySyncMessengerTab) {
+              chrome.tabs.create(
+                { url: envVariables.MESSENGER_MARKETPLACE, active: false },
+                (tab) => {
+                  chrome.storage.local.set({ dailySyncMessengerTab: tab.id });
+                }
+              );
+            }
           }
         });
 
@@ -700,15 +719,25 @@ chrome.webRequest.onBeforeRequest.addListener(
       });
     } else if (
       details.url.startsWith(
-        `${envVariables.CHROME_EXTENSION_FRONT_URL}save-messages`
+        `${envVariables.CHROME_EXTENSION_FRONT_URL}?toggle-enable`
       )
     ) {
+      chrome.tabs.query(
+        { url: `${envVariables.CHROME_EXTENSION_FRONT_URL}*` },
+        (tabs) => {
+          chrome.scripting.executeScript({
+            target: { tabId: tabs[0].id },
+            function: onEnableChromeExtension,
+          });
+        }
+      );
     }
   },
   { urls: ["<all_urls>"] }
 );
 
 chrome.runtime.onInstalled.addListener(() => {
+  getScheduleMessages();
   console.log(chrome.runtime.getURL(""));
 });
 
@@ -902,5 +931,11 @@ const performTaskEachMinute = () => {
   });
 };
 
-setInterval(performTaskEachMinute, 60000);
-setInterval(performTaskEveryDay, 24 * 60 * 60 * 1000);
+
+const getScheduleMessages = () => {
+  performTaskEveryDay();
+  setInterval(performTaskEachMinute, 60000);
+  setInterval(performTaskEveryDay, 24 * 60 * 60 * 1000);
+}
+
+
