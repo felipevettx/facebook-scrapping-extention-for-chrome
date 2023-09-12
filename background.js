@@ -4,10 +4,14 @@ const envVariables = {
   // Dev url CHROME_EXTENSION_FRONT_URL: 'https://app-dev.vettx.com/',
 };
 
+const newMessagesMessengerTab = "new-message-messenger-tab";
+const dailySyncMessengerTab = "daily-sync-messenger-tab";
+const messengerTab = "messenger-tab";
+
 chrome.storage.local.set({ envVariables });
 
 const checkNewMessages = async () => {
-  console.log('checking new messages');
+  console.log("checking new messages");
   const newMessages = document.querySelectorAll('[aria-label^="Mark as read"]');
   const newMessagesReferences = [];
 
@@ -26,10 +30,16 @@ const checkNewMessages = async () => {
       chrome.storage.local.get(["senderTab"]).then((result) => {
         const tabId = result.senderTab;
 
+        const conversations = [];
+        currentConversations.forEach(conversation => {
+          const messages = conversation.messages;
+          conversations.push(...messages);
+        });
+
         chrome.runtime.sendMessage({
-          type: "saveAllConversations",
+          type: "saveConversations",
           tabId,
-          conversation: currentConversations,
+          conversation: conversations,
         });
       });
       return;
@@ -48,14 +58,6 @@ const checkNewMessages = async () => {
 
       let facebookConversation = {};
       let mpID = null;
-      const title = el.querySelector(
-        "span.x1lliihq.x193iq5w.x6ikm8r.x10wlt62.xlyipyv.xuxw1ft"
-      );
-
-      if (title) {
-        const parts = title.innerText.split(" · ");
-        facebookConversation = { ...facebookConversation, title: parts[1] };
-      }
 
       if (facebookLinkElement) {
         const hrefFacebook = facebookLinkElement.getAttribute("href");
@@ -105,6 +107,7 @@ const checkNewMessages = async () => {
 };
 
 const checkAllMessages = async () => {
+  console.log("checking all messages");
   const elements = document.querySelectorAll(
     'a[role="link"].x1i10hfl.x1qjc9v5.xjqpnuy.xa49m3k'
   );
@@ -113,14 +116,19 @@ const checkAllMessages = async () => {
   let index = 0;
 
   const intervalId = setInterval(() => {
-    if (index >= 10) {
+    if (index >= currentConversations.length) {
       clearInterval(intervalId);
       chrome.storage.local.get(["senderTab"]).then((result) => {
+        const conversations = [];
+        currentConversations.forEach(conversation => {
+          const messages = conversation.messages;
+          conversations.push(...messages);
+        });
         const tabId = result.senderTab;
         chrome.runtime.sendMessage({
-          type: "saveAllConversations",
+          type: "saveConversations",
           tabId,
-          conversation: currentConversations,
+          conversation: conversations,
         });
       });
       return;
@@ -184,7 +192,7 @@ const checkAllMessages = async () => {
         }
 
         if (messageType) {
-          messages.push({ type: messageType, text: messageText });
+          messages.push({ type: messageType, text: messageText, facebookId: mpID, messengerId: msID });
         }
       });
 
@@ -193,15 +201,6 @@ const checkAllMessages = async () => {
       index++;
     }, 2000);
   }, 2000);
-
-  chrome.storage.local.get(["messengerTabId"]).then((result) => {
-    const messengerTabId = result.messengerTabId;
-
-    chrome.scripting.executeScript({
-      target: { tabId: messengerTabId },
-      function: checkNewMessages,
-    });
-  });
 };
 
 function openMessenger() {
@@ -289,14 +288,14 @@ const sendMessageToMessenger = (messageId, message) => {
 
           chrome.storage.local.get(["senderTab"]).then((result) => {
             const tabId = result.senderTab;
+
             chrome.runtime.sendMessage({
-              type: "saveSentMessengerMessage",
+              type: "saveConversations",
               tabId,
-              messengerId: messageId,
-              facebookId: mpID,
               conversation: [
                 {
-                  text: textToType,
+                  message: textToType,
+                  status: "sent",
                   type: "sent",
                   messengerId: messageId,
                   facebookId: mpID,
@@ -362,13 +361,22 @@ function sendFacebookMessage(message, tabInfo) {
       const myButton = document.querySelector(`[aria-label^="${ariaLabel}"]`);
       myButton.click();
 
-      chrome.storage.local.get(["senderTab"]).then((result) => {
+      chrome.storage.local.get(["senderTab", "vehicle"]).then((result) => {
         const tabId = result.senderTab;
+        const vehicleId = result.vehicle;
         chrome.runtime.sendMessage({
-          type: "saveSendMessages",
+          type: "saveConversations",
           tabId,
           tabInfo,
-          conversation: [{ text: textToType, type: "sent" }],
+          conversation: [
+            {
+              message: textToType,
+              type: "sent",
+              status: "sent",
+              facebookId: tabInfo.marketplaceID,
+              vehicleId,
+            },
+          ],
         });
       });
     });
@@ -391,13 +399,22 @@ function sendFacebookMessage(message, tabInfo) {
       if (sendButton) {
         sendButton.click();
 
-        chrome.storage.local.get(["senderTab"]).then((result) => {
+        chrome.storage.local.get(["senderTab", "vehicle"]).then((result) => {
           const tabId = result.senderTab;
+          const vehicleId = result.vehicle;
           chrome.runtime.sendMessage({
-            type: "saveSendMessages",
+            type: "saveConversations",
             tabId,
             tabInfo,
-            conversation: [{ text: textToType, type: "sent" }],
+            conversation: [
+              {
+                message: textToType,
+                type: "sent",
+                status: "sent",
+                facebookId: tabInfo.marketplaceID,
+                vehicleId,
+              },
+            ],
           });
         });
       }
@@ -496,10 +513,8 @@ chrome.webRequest.onBeforeRequest.addListener(
       );
       const dataArray = data.split("&");
       const vehicle = dataArray[0]?.replace("vehicle=", "");
-      const user = dataArray[1]?.replace("user=", "");
-      const seller = dataArray[2]?.replace("seller=", "");
-      const message = dataArray[3]?.replace("message=", "");
-      const url = dataArray[4]?.replace("url=", "");
+      const message = dataArray[1]?.replace("message=", "");
+      const url = dataArray[2]?.replace("url=", "");
 
       const match = url.match(/\/item\/(\d+)\//);
       let marketplaceID = null;
@@ -515,8 +530,6 @@ chrome.webRequest.onBeforeRequest.addListener(
               chrome.storage.local.set({
                 message: message,
                 vehicle: vehicle,
-                seller: seller,
-                user: user,
               });
 
               chrome.storage.local
@@ -588,7 +601,7 @@ chrome.webRequest.onBeforeRequest.addListener(
       });
     } else if (
       details.url.startsWith(
-        `${envVariables.CHROME_EXTENSION_FRONT_URL}?keepAlive`
+        `${envVariables.CHROME_EXTENSION_FRONT_URL}keep-alive`
       )
     ) {
       chrome.tabs.query({}, (tabs) => {
@@ -602,209 +615,190 @@ chrome.webRequest.onBeforeRequest.addListener(
           }
         }
       });
+    } else if (
+      details.url.startsWith(
+        `${envVariables.CHROME_EXTENSION_FRONT_URL}?open-messenger`
+      )
+    ) {
+      chrome.tabs.create(
+        { url: envVariables.MESSENGER_MARKETPLACE, active: false },
+        (tab) => {
+          chrome.storage.local.set({ messengerTab: tab.id });
+          chrome.tabs.query(
+            { url: `${envVariables.CHROME_EXTENSION_FRONT_URL}*` },
+            (tabs) => {
+              chrome.scripting.executeScript({
+                target: { tabId: tabs[0].id },
+                function: onMessengerOpen,
+              });
+            }
+          );
+        }
+      );
+    } else if (
+      details.url.startsWith(
+        `${envVariables.CHROME_EXTENSION_FRONT_URL}extension-init`
+      )
+    ) {
+      chrome.storage.local
+        .get([
+          "newMessagesMessengerTab",
+          "dailySyncMessengerTab",
+          "messengerTab",
+        ])
+        .then((result) => {
+          const messengerTab = result.messengerTab;
+          const newMessagesMessengerTab = result.newMessagesMessengerTab;
+          const dailySyncMessengerTab = result.dailySyncMessengerTab;
+
+          if (!messengerTab) {
+            chrome.tabs.create(
+              { url: envVariables.MESSENGER_MARKETPLACE, active: false },
+              (tab) => {
+                chrome.storage.local.set({ messengerTab: tab.id });
+              }
+            );
+          }
+
+          if (!newMessagesMessengerTab) {
+            chrome.tabs.create(
+              { url: envVariables.MESSENGER_MARKETPLACE, active: false },
+              (tab) => {
+                chrome.storage.local.set({ newMessagesMessengerTab: tab.id });
+              }
+            );
+          }
+
+          if (!dailySyncMessengerTab) {
+            chrome.tabs.create(
+              { url: envVariables.MESSENGER_MARKETPLACE, active: false },
+              (tab) => {
+                chrome.storage.local.set({ dailySyncMessengerTab: tab.id });
+              }
+            );
+          }
+        });
+
+      chrome.tabs.query({}, (tabs) => {
+        for (const tab of tabs) {
+          if (tab.url.startsWith(envVariables.CHROME_EXTENSION_FRONT_URL)) {
+            chrome.storage.local.set({ senderTab: tab.id });
+            chrome.scripting.executeScript({
+              target: { tabId: tab.id },
+              function: saveChromeExtensionState,
+            });
+            chrome.scripting.executeScript({
+              target: { tabId: tab.id },
+              function: onEnableChromeExtension,
+            });
+            chrome.scripting.executeScript({
+              target: { tabId: tab.id },
+              function: onMessengerOpen,
+            });
+          }
+        }
+      });
+    } else if (
+      details.url.startsWith(
+        `${envVariables.CHROME_EXTENSION_FRONT_URL}save-messages`
+      )
+    ) {
     }
   },
   { urls: ["<all_urls>"] }
 );
 
-chrome.runtime.onInstalled.addListener(function () {
-  let tabFound = false;
-  let vettxTabFound = false;
-  chrome.tabs.query({}, (tabs) => {
-    for (const tab of tabs) {
-      if (tab.url.startsWith(envVariables.CHROME_EXTENSION_FRONT_URL)) {
-        chrome.storage.local.set({ senderTab: tab.id });
-        chrome.scripting.executeScript({
-          target: { tabId: tab.id },
-          function: saveChromeExtensionState,
-        });
-        vettxTabFound = true;
-      }
-      if (tab.url.startsWith(envVariables.MESSENGER_MARKETPLACE)) {
-        chrome.storage.local.set({ messengerTabId: tab.id });
-        tabFound = true;
-      }
-    }
-
-    if (!tabFound) {
-      chrome.tabs.create(
-        { url: envVariables.MESSENGER_MARKETPLACE, active: false },
-        (tab) => {
-          chrome.storage.local.set({
-            messengerTabId: tab.id,
-          });
-
-          chrome.tabs.onUpdated.addListener(function listener(
-            tabId,
-            changeInfo
-          ) {
-            if (changeInfo.status === "complete" && tabId === tab.id) {
-              chrome.tabs.onUpdated.removeListener(listener);
-            }
-          });
-        }
-      );
-    }
-    if (!vettxTabFound) {
-      chrome.tabs.create(
-        { url: envVariables.CHROME_EXTENSION_FRONT_URL, active: false },
-        (tab) => {
-          chrome.storage.local.set({
-            senderTab: tab.id,
-          });
-
-          chrome.tabs.onUpdated.addListener(function listener(
-            tabId,
-            changeInfo
-          ) {
-            if (changeInfo.status === "complete" && tabId === tab.id) {
-              chrome.tabs.onUpdated.removeListener(listener);
-            }
-          });
-        }
-      );
-    }
-  });
+chrome.runtime.onInstalled.addListener(() => {
+  console.log(chrome.runtime.getURL(""));
 });
 
 const saveChromeExtensionState = () => {
-  chrome.storage.local.set({
-    initialized: true,
-    vettxOpened: true,
-  });
-  window.postMessage({ type: 'vettx-chrome-extension-installed' }, '*');
-}
+  window.postMessage({ type: "vettx-chrome-extension-installed" }, "*");
+};
 
 const onEnableChromeExtension = () => {
-  window.postMessage({ type: 'vettx-chrome-extension-enabled' }, '*');
-}
+  window.postMessage({ type: "vettx-chrome-extension-enabled" }, "*");
+};
 
 const onDisableChromeExtension = () => {
-  window.postMessage({ type: 'vettx-chrome-extension-disabled' }, '*');
-}
+  window.postMessage({ type: "vettx-chrome-extension-disabled" }, "*");
+};
 
 const onMessengerClosed = () => {
-  window.postMessage({ type: 'messenger-tab-closed' }, '*');
-}
+  window.postMessage({ type: "messenger-tab-closed" }, "*");
+};
+
+const onMessengerOpen = () => {
+  window.postMessage({ type: "messenger-tab-open" }, "*");
+};
 
 const onVettxTabClosed = () => {
-  console.log('closed vettx tab');
-}
+  console.log("closed vettx tab");
+};
 
-function sendResponseToOrigin(
-  conversation,
-  vehicleId,
-  userId,
-  seller,
-  marketplaceID
-) {
-  const button = document.getElementsByClassName(
-    "facebook-message-loading-button"
-  )[0];
+const sendResponseToOrigin = (conversation) => {
   if (conversation?.length > 0) {
-    button.setAttribute("data-conversation", JSON.stringify(conversation));
-    button.setAttribute("data-vehicle-id", JSON.stringify(vehicleId));
-    button.setAttribute("data-user-id", JSON.stringify(userId));
-    button.setAttribute("data-seller-name", JSON.stringify(seller));
-    button.setAttribute("data-market-place-id", JSON.stringify(marketplaceID));
-    button.click();
-  }
-}
-
-function sendResponseFromMessenger(conversation) {
-  const button = document.getElementsByClassName(
-    "facebook-message-loading-button"
-  )[0];
-  if (conversation?.length > 0) {
-    button.setAttribute(
-      "data-messenger-conversation",
-      JSON.stringify(conversation)
+    window.postMessage(
+      {
+        type: "vettx-chrome-extension-save-messages",
+        conversation,
+      },
+      "*"
     );
-    button.click();
   }
-}
-
-function sendConversations(conversation) {
-  const button = document.getElementsByClassName(
-    "facebook-message-loading-button"
-  )[0];
-  if (conversation?.length > 0) {
-    button.setAttribute(
-      "data-messenger-conversation",
-      JSON.stringify(conversation)
-    );
-    button.click();
-  }
-}
+};
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.message === "messenger-tab-closed") {
-    chrome.tabs.query({ url: `${envVariables.CHROME_EXTENSION_FRONT_URL}*` }, (tabs) => {
-    chrome.scripting.executeScript({
-            target: { tabId: tabs[0].id },
-            function: onDisableChromeExtension,
-          });
-    });
+    chrome.tabs.query(
+      { url: `${envVariables.CHROME_EXTENSION_FRONT_URL}*` },
+      (tabs) => {
+        chrome.scripting.executeScript({
+          target: { tabId: tabs[0].id },
+          function: onDisableChromeExtension,
+        });
+      }
+    );
   }
   if (message.message === "enable-vettx-extension") {
-    chrome.tabs.query({ url: `${envVariables.CHROME_EXTENSION_FRONT_URL}*` }, (tabs) => {
-    chrome.scripting.executeScript({
-            target: { tabId: tabs[0].id },
-            function: onEnableChromeExtension,
-          });
-    });
+    chrome.tabs.query(
+      { url: `${envVariables.CHROME_EXTENSION_FRONT_URL}*` },
+      (tabs) => {
+        chrome.scripting.executeScript({
+          target: { tabId: tabs[0].id },
+          function: onEnableChromeExtension,
+        });
+      }
+    );
   }
   if (message.message === "disable-vettx-extension") {
-    chrome.tabs.query({ url: `${envVariables.CHROME_EXTENSION_FRONT_URL}*` }, (tabs) => {
-    chrome.scripting.executeScript({
-            target: { tabId: tabs[0].id },
-            function: onDisableChromeExtension,
-          });
-    });
+    chrome.tabs.query(
+      { url: `${envVariables.CHROME_EXTENSION_FRONT_URL}*` },
+      (tabs) => {
+        chrome.scripting.executeScript({
+          target: { tabId: tabs[0].id },
+          function: onDisableChromeExtension,
+        });
+      }
+    );
   }
   if (message.type === "saveSendMessages") {
     const tabId = message.tabId;
     const conversation = message.conversation;
-    const tabInfo = message.tabInfo;
 
-    chrome.storage.local.get(["vehicle", "user", "seller"]).then((result) => {
-      const vehicleId = result.vehicle;
-      const userId = result.user;
-      const seller = result.seller;
-      const marketplaceID = tabInfo.marketplaceID;
-
-      chrome.scripting.executeScript({
-        target: { tabId },
-        function: sendResponseToOrigin,
-        args: [conversation, vehicleId, userId, seller, marketplaceID],
-      });
-    });
-  }
-  if (message.type === "saveSentMessengerMessage") {
-    const tabId = message.tabId;
-    const conversation = [
-      {
-        messages: message.conversation,
-        messengerId: message.messengerId,
-        facebookId: message.facebookId,
-      },
-    ];
     chrome.scripting.executeScript({
       target: { tabId },
-      function: sendResponseFromMessenger,
+      function: sendResponseToOrigin,
       args: [conversation],
     });
   }
-  if (message.type === "saveAllConversations") {
+  if (message.type === "saveConversations") {
     const tabId = message.tabId;
     const conversation = message.conversation;
-
-    chrome.tabs.update(tabId, {}, () => {
-      chrome.scripting.executeScript({
-        target: { tabId },
-        function: sendConversations,
-        args: [conversation],
-      });
+    chrome.scripting.executeScript({
+      target: { tabId },
+      function: sendResponseToOrigin,
+      args: [conversation],
     });
   }
   if (message.type === "sendFacebookMessage") {
@@ -831,57 +825,82 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
- chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
-  chrome.storage.local.get(["messengerTabId", "senderTab"]).then((result) => {
-    if (result.messengerTabId) {
-      const messengerTabId = result.messengerTabId;
-      const senderTab = result.senderTab;
-      if (messengerTabId === tabId) {
-        chrome.tabs.query({ url: `${envVariables.CHROME_EXTENSION_FRONT_URL}*` }, (tabs) => {
-          chrome.scripting.executeScript({
-                  target: { tabId: tabs[0].id },
-                  function: onMessengerClosed,
-                });
-          });
-        } else if(senderTab === tabId) {
+chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
+  chrome.storage.local
+    .get([
+      "newMessagesMessengerTab",
+      "dailySyncMessengerTab",
+      "messengerTab",
+      "senderTab",
+    ])
+    .then((result) => {
+      console.log(JSON.stringify(result));
+      console.log(tabId);
+      const messengerTab = result.messengerTab;
+      if (messengerTab && messengerTab === tabId) {
+        chrome.storage.local.set({ messengerTab: undefined });
+        chrome.tabs.query(
+          { url: `${envVariables.CHROME_EXTENSION_FRONT_URL}*` },
+          (tabs) => {
+            chrome.scripting.executeScript({
+              target: { tabId: tabs[0].id },
+              function: onMessengerClosed,
+            });
+          }
+        );
+      } else {
+        const senderTab = result.senderTab;
+        if (senderTab === tabId) {
           chrome.windows.create({
-            type: 'popup',
-            url: 'error.html',
+            type: "popup",
+            url: "error.html",
             width: 300,
             height: 200,
-        });
+          });
           chrome.action.setPopup({ popup: "popup.html" });
-          chrome.tabs.query({ url: `${envVariables.MESSENGER_MARKETPLACE}*` }, (tabs) => {
-            chrome.scripting.executeScript({
-                    target: { tabId: tabs[0].id },
-                    function: onVettxTabClosed,
-                  });
-            });
-        } else{console.log('not the same')}
-        }else{}  
-    });
-  });
-
-function performTaskOnTab() {
-  chrome.storage.local.get(["messengerTabId"]).then((result) => {
-    if (result.messengerTabId) {
-      const messengerTabId = result.messengerTabId;
-      chrome.scripting.executeScript({
-        target: { tabId: messengerTabId },
-        function: checkNewMessages,
-      });
-    }
-  });
-}
-
-function performTaskPeriodically() {
-  chrome.tabs.query({}, function (tabs) {
-    tabs.forEach(function (tab) {
-      if (tab.url.includes(envVariables.MESSENGER_MARKETPLACE)) {
-        performTaskOnTab(tab.id);
+          chrome.tabs.query(
+            { url: `${envVariables.MESSENGER_MARKETPLACE}*` },
+            (tabs) => {
+              chrome.scripting.executeScript({
+                target: { tabId: tabs[0].id },
+                function: onVettxTabClosed,
+              });
+            }
+          );
+        } else {
+          console.log("not the same");
+        }
       }
     });
-  });
-}
+});
 
-setInterval(performTaskPeriodically, 25000);
+const performTaskEveryDay = () => {
+  chrome.storage.local.get(["dailySyncMessengerTab"]).then((result) => {
+    if (result.dailySyncMessengerTab) {
+      const messengerTabId = result.dailySyncMessengerTab;
+      if (messengerTabId) {
+        chrome.scripting.executeScript({
+          target: { tabId: messengerTabId },
+          function: checkAllMessages,
+        });
+      }
+    }
+  });
+};
+
+const performTaskEachMinute = () => {
+  chrome.storage.local.get(["newMessagesMessengerTab"]).then((result) => {
+    if (result.newMessagesMessengerTab) {
+      const messengerTabId = result.newMessagesMessengerTab;
+      if (messengerTabId) {
+        chrome.scripting.executeScript({
+          target: { tabId: messengerTabId },
+          function: checkNewMessages,
+        });
+      }
+    }
+  });
+};
+
+setInterval(performTaskEachMinute, 60000);
+setInterval(performTaskEveryDay, 24 * 60 * 60 * 1000);
