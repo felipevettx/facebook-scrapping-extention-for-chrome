@@ -95,7 +95,8 @@ const checkNewMessages = async () => {
         }
 
         if (messageType) {
-          messages.push({ type: messageType, text: messageText });
+          messages.push({ status: messageType, type: messageType, message: messageText, facebookId: mpID,
+            messengerId: msID });
         }
       });
 
@@ -116,7 +117,7 @@ const checkAllMessages = async () => {
   let index = 0;
 
   const intervalId = setInterval(() => {
-    if (index >= currentConversations.length) {
+    if (index >= elements.length) {
       clearInterval(intervalId);
       chrome.storage.local.get(["senderTab"]).then((result) => {
         const conversations = [];
@@ -147,14 +148,7 @@ const checkAllMessages = async () => {
 
       let facebookConversation = {};
       let mpID = null;
-      const title = el.querySelector(
-        "span.x1lliihq.x193iq5w.x6ikm8r.x10wlt62.xlyipyv.xuxw1ft"
-      );
 
-      if (title) {
-        const parts = title.innerText.split(" · ");
-        facebookConversation = { ...facebookConversation, title: parts[1] };
-      }
 
       if (facebookLinkElement) {
         const hrefFacebook = facebookLinkElement.getAttribute("href");
@@ -194,7 +188,7 @@ const checkAllMessages = async () => {
         if (messageType) {
           messages.push({
             type: messageType,
-            text: messageText,
+            message: messageText,
             facebookId: mpID,
             messengerId: msID,
           });
@@ -567,24 +561,23 @@ chrome.webRequest.onBeforeRequest.addListener(
       const messageId = dataArray[0]?.replace("messageId=", "");
       const message = dataArray[1]?.replace("message=", "");
 
-      chrome.tabs.query({}, function (tabs) {
-        for (const tab of tabs) {
-          if (tab.url.startsWith(envVariables.MESSENGER_MARKETPLACE)) {
-            chrome.tabs.update(tab.id, { active: false }, () => {
-              chrome.storage.local.set({
-                message: message,
-                messageId: messageId,
-              });
+      chrome.storage.local.get([
+        "messengerTab",
+      ])
+      .then((result) => {
+        const messengerTab = result.messengerTab;
+        chrome.tabs.update(messengerTab, { active: false }, () => {
+          chrome.storage.local.set({
+            message: message,
+            messageId: messageId,
+          });
 
-              const currentId = tab.id;
-              chrome.scripting.executeScript({
-                target: { tabId: currentId },
-                function: sendMessageToMessenger,
-                args: [messageId, message],
-              });
-            });
-          }
-        }
+          chrome.scripting.executeScript({
+            target: { tabId: messengerTab },
+            function: sendMessageToMessenger,
+            args: [messageId, message],
+          });
+        });
       });
     } else if (
       details.url.startsWith(
@@ -863,8 +856,6 @@ chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
       "senderTab",
     ])
     .then((result) => {
-      console.log(JSON.stringify(result));
-      console.log(tabId);
       const messengerTab = result.messengerTab;
       if (messengerTab && messengerTab === tabId) {
         chrome.storage.local.set({ messengerTab: undefined });
