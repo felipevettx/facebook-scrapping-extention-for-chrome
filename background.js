@@ -31,7 +31,7 @@ const checkNewMessages = async () => {
         const tabId = result.senderTab;
 
         const conversations = [];
-        currentConversations.forEach(conversation => {
+        currentConversations.forEach((conversation) => {
           const messages = conversation.messages;
           conversations.push(...messages);
         });
@@ -95,8 +95,13 @@ const checkNewMessages = async () => {
         }
 
         if (messageType) {
-          messages.push({ status: messageType, type: messageType, message: messageText, facebookId: mpID,
-            messengerId: msID });
+          messages.push({
+            status: messageType,
+            type: messageType,
+            message: messageText,
+            facebookId: mpID,
+            messengerId: msID,
+          });
         }
       });
 
@@ -148,7 +153,6 @@ const checkAllMessages = async () => {
 
       let facebookConversation = {};
       let mpID = null;
-
 
       if (facebookLinkElement) {
         const hrefFacebook = facebookLinkElement.getAttribute("href");
@@ -268,7 +272,7 @@ const sendMessageToMessenger = (messageId, message) => {
           'div[aria-label="Press Enter to send"]'
         );
         if (sendButton) {
-          sendButton.click();
+          // sendButton.click();
 
           const facebookLinkElement = document.querySelector(
             'a[role="link"].x1i10hfl.x1qjc9v5.xjqpnuy.xa49m3k[href^="https://www.facebook.com/marketplace/item"]'
@@ -638,58 +642,33 @@ chrome.webRequest.onBeforeRequest.addListener(
         `${envVariables.CHROME_EXTENSION_FRONT_URL}extension-init`
       )
     ) {
-      chrome.storage.local
-        .get([
-          "newMessagesMessengerTab",
-          "dailySyncMessengerTab",
-          "messengerTab",
-        ])
-        .then((result) => {
-          const messengerTab = result.messengerTab;
-          const newMessagesMessengerTab = result.newMessagesMessengerTab;
-          const dailySyncMessengerTab = result.dailySyncMessengerTab;
-
-          if (
-            !messengerTab ||
-            !newMessagesMessengerTab ||
-            !dailySyncMessengerTab
-          ) {
-            chrome.tabs.query({}, function (tabs) {
-              for (const tab of tabs) {
-                if (tab.url.startsWith(envVariables.MESSENGER_MARKETPLACE)) {
-                  chrome.tabs.remove(tab.id);
-                }
-              }
-            });
-
-            if (!messengerTab) {
-              chrome.tabs.create(
-                { url: envVariables.MESSENGER_MARKETPLACE, active: false },
-                (tab) => {
-                  chrome.storage.local.set({ messengerTab: tab.id });
-                }
-              );
-            }
-
-            if (!newMessagesMessengerTab) {
-              chrome.tabs.create(
-                { url: envVariables.MESSENGER_MARKETPLACE, active: false },
-                (tab) => {
-                  chrome.storage.local.set({ newMessagesMessengerTab: tab.id });
-                }
-              );
-            }
-
-            if (!dailySyncMessengerTab) {
-              chrome.tabs.create(
-                { url: envVariables.MESSENGER_MARKETPLACE, active: false },
-                (tab) => {
-                  chrome.storage.local.set({ dailySyncMessengerTab: tab.id });
-                }
-              );
-            }
+      chrome.tabs.query({}, function (tabs) {
+        for (const tab of tabs) {
+          if (tab.url.startsWith(envVariables.MESSENGER_MARKETPLACE)) {
+            chrome.tabs.remove(tab.id);
           }
-        });
+        }
+      });
+      chrome.tabs.create(
+        { url: envVariables.MESSENGER_MARKETPLACE, active: false },
+        (tab) => {
+          chrome.storage.local.set({ messengerTab: tab.id });
+        }
+      );
+
+      chrome.tabs.create(
+        { url: envVariables.MESSENGER_MARKETPLACE, active: false },
+        (tab) => {
+          chrome.storage.local.set({ newMessagesMessengerTab: tab.id });
+        }
+      );
+
+      chrome.tabs.create(
+        { url: envVariables.MESSENGER_MARKETPLACE, active: false },
+        (tab) => {
+          chrome.storage.local.set({ dailySyncMessengerTab: tab.id });
+        }
+      );
 
       chrome.tabs.query({}, (tabs) => {
         for (const tab of tabs) {
@@ -922,11 +901,8 @@ const performTaskEachMinute = () => {
   });
 };
 
-
 const getScheduleMessages = () => {
   performTaskEveryDay();
   setInterval(performTaskEachMinute, 60000);
   setInterval(performTaskEveryDay, 24 * 60 * 60 * 1000);
-}
-
-
+};
