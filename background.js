@@ -694,6 +694,7 @@ chrome.webRequest.onBeforeRequest.addListener(
         `${envVariables.CHROME_EXTENSION_FRONT_URL}?toggle-enable`
       )
     ) {
+      chrome.storage.local.set({ enableExtension: true });
       chrome.tabs.query(
         { url: `${envVariables.CHROME_EXTENSION_FRONT_URL}*` },
         (tabs) => {
@@ -773,6 +774,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     );
   }
   if (message.message === "disable-vettx-extension") {
+    chrome.storage.local.set({ enableExtension: false });
     chrome.tabs.query(
       { url: `${envVariables.CHROME_EXTENSION_FRONT_URL}*` },
       (tabs) => {
