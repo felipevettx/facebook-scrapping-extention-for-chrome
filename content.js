@@ -36,14 +36,11 @@ function waitForElement(selectors, timeout = 30000) {
 function extractProductData(productElement) {
   console.log("Extrayendo datos de producto:", productElement);
 
-  // Extraer el ID del producto del enlace
   const productId = productElement.href.split("/item/")[1]?.split("/")[0] || "ID no disponible";
   
-  // Extraer precio - usando el selector específico para el precio
   const priceElement = productElement.querySelector('span[class*="x193iq5w"][class*="xeuugli"][class*="x13faqbe"]:first-child');
   let price = priceElement ? priceElement.textContent.trim().replace('$', '').replace(',', '') : 'Precio no disponible';
   
-  // Extraer título y año
   const titleElement = productElement.querySelector('span[class*="x1lliihq x6ikm8r x10wlt62 x1n2onr6"]');
   let title = 'Título no disponible';
   let year = 'Año no disponible';
@@ -59,11 +56,12 @@ function extractProductData(productElement) {
     }
   }
 
-  // Extraer ubicación
   const locationElement = productElement.querySelector('span[class*="x1lliihq x6ikm8r x10wlt62 x1n2onr6 xlyipyv xuxw1ft"]');
-  
-  // Extraer imagen
   const imageElement = productElement.querySelector('img[class*="xt7dq6l"]');
+
+  // Extraer información adicional si está disponible
+  const additionalInfoElement = productElement.querySelector('span[class*="x1lliihq x6ikm8r x10wlt62 x1n2onr6 xlyipyv xuxw1ft x1j85h84"]:last-child');
+  const additionalInfo = additionalInfoElement ? additionalInfoElement.textContent.trim() : '';
 
   return {
     id: productId,
@@ -72,7 +70,8 @@ function extractProductData(productElement) {
     price: price,
     location: locationElement ? locationElement.textContent.trim() : 'Ubicación no disponible',
     imageUrl: imageElement ? imageElement.src : '',
-    link: productElement.href
+    link: productElement.href,
+    additionalInfo: additionalInfo
   };
 }
 

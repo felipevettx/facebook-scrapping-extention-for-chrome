@@ -1,40 +1,52 @@
 <!DOCTYPE html>
 <html lang="es">
-<head>
-  <title>Facebook Scraper Data</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta charset="UTF-8">
-  <style>
-    body {
-      width: 300px;
-      padding: 10px;
-      font-family: Arial, sans-serif;
-    }
-    h1 {
-      font-size: 18px;
-      margin-bottom: 10px;
-    }
-    button {
-      width: 100%;
-      padding: 10px;
-      margin-bottom: 10px;
-    }
-    #output {
-      white-space: pre-wrap;
-      word-wrap: break-word;
-      max-height: 300px;
-      overflow-y: auto;
-      border: 1px solid #ccc;
-      padding: 5px;
-    }
-  </style>
-</head>
-<body>
-  <h1>Facebook Marketplace Scraper</h1>
-  
-  <button id="scrapeButton">Extract Data</button>
-  <pre id="output"></pre>
-  <script src="popup.js"></script>
-</body>
-</html>
+  <head>
+    <title>Facebook Scraper Data</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8" />
+    <style>
+      body {
+        width: 300px;
+        padding: 10px;
+        font-family: Arial, sans-serif;
+      }
+      h1 {
+        font-size: 18px;
+        margin-bottom: 10px;
+      }
+      button {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 10px;
+       
+        border: 2px solid #4189c8;
+        background-color: #fafdff;
+        font: bold;
+        color: #4189c8;
+        border-radius: 6px;
+        transition: background-color 0.3s ease, color 0.3s ease;
+      }
+      button:hover{
+        background-color: #4189c8;
+        color: white;
+        cursor: pointer;
+      }
+      #output {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        max-height: 300px;
+        overflow-y: auto;
+        border: 1px solid #ccc;
+        padding: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <img src="./images/logo.svg" alt="Vettx Logo" />
+    <h1>Facebook Marketplace Scraper</h1>
 
+    <button id="scrapeButton">Extract Data</button>
+    <pre id="output"></pre>
+    <script src="popup.js"></script>
+  </body>
+</html>
