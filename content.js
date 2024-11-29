@@ -35,16 +35,41 @@ function waitForElement(selectors, timeout = 30000) {
 
 function extractProductData(productElement) {
   console.log("Extrayendo datos de producto:", productElement);
-  const productId = productElement.href.split("/item/")[1]?.split("/")[0] || "Id don't aviable"
-  const titleElement = productElement.querySelector('span[dir="auto"]') || productElement.querySelector('span');
-  const priceElement = productElement.querySelector('span[aria-label]') || productElement.querySelector('span:nth-child(2)');
-  const locationElement = productElement.querySelector('span[aria-label] + span') || productElement.querySelector('span:nth-child(3)');
-  const imageElement = productElement.querySelector('img');
-const descriptionElement = productElement.querySelector('span[dir="auto"]:not(:first-child)')
+
+  // Extraer el ID del producto del enlace
+  const productId = productElement.href.split("/item/")[1]?.split("/")[0] || "ID no disponible";
+  
+  // Extraer precio - usando el selector específico para el precio
+  const priceElement = productElement.querySelector('span[class*="x193iq5w"][class*="xeuugli"][class*="x13faqbe"]:first-child');
+  let price = priceElement ? priceElement.textContent.trim().replace('$', '').replace(',', '') : 'Precio no disponible';
+  
+  // Extraer título y año
+  const titleElement = productElement.querySelector('span[class*="x1lliihq x6ikm8r x10wlt62 x1n2onr6"]');
+  let title = 'Título no disponible';
+  let year = 'Año no disponible';
+  
+  if (titleElement) {
+    const fullTitle = titleElement.textContent.trim();
+    const yearMatch = fullTitle.match(/\b(19|20)\d{2}\b/);
+    if (yearMatch) {
+      year = yearMatch[0];
+      title = fullTitle.replace(year, '').trim();
+    } else {
+      title = fullTitle;
+    }
+  }
+
+  // Extraer ubicación
+  const locationElement = productElement.querySelector('span[class*="x1lliihq x6ikm8r x10wlt62 x1n2onr6 xlyipyv xuxw1ft"]');
+  
+  // Extraer imagen
+  const imageElement = productElement.querySelector('img[class*="xt7dq6l"]');
+
   return {
     id: productId,
-    title: titleElement ? titleElement.textContent.trim() : 'Título no disponible',
-    price: priceElement ? priceElement.textContent.trim() : 'Precio no disponible',
+    title: title,
+    year: year,
+    price: price,
     location: locationElement ? locationElement.textContent.trim() : 'Ubicación no disponible',
     imageUrl: imageElement ? imageElement.src : '',
     link: productElement.href
@@ -76,9 +101,6 @@ async function scrapeMarketplace() {
     console.log("Página desplazada completamente");
 
     const productElements = await waitForElement([
-      'div[aria-label="Colección de artículos en venta en Marketplace"] a[href^="/marketplace/item/"]',
-      'div[data-pagelet="BrowseFeedUpsell"] a[href^="/marketplace/item/"]',
-      'div[data-pagelet="MainFeed"] a[href^="/marketplace/item/"]',
       'a[href^="/marketplace/item/"]'
     ]);
 
@@ -92,6 +114,7 @@ async function scrapeMarketplace() {
 
     console.log(`Se extrajeron datos de ${products.length} productos`);
     console.log("Muestra de datos extraídos:", products[0]);
+
     // Enviar los datos al background script
     browser.runtime.sendMessage({ action: "scrapeComplete", payload: products });
   } catch (error) {
@@ -100,9 +123,9 @@ async function scrapeMarketplace() {
   }
 }
 
-// Ejecución aoutomatica del scrapeMarketplace cuando se carga la página
+// Ejecutar scrapeMarketplace automáticamente cuando se carga la página
 window.addEventListener('load', () => {
   console.log("Página cargada, iniciando extracción automática");
-  setTimeout(scrapeMarketplace, 5000); // Espera 5 segundos para iniciar la extracción
+  setTimeout(scrapeMarketplace, 5000); // Esperar 5 segundos antes de iniciar la extracción
 });
 
