@@ -1,32 +1,28 @@
 {
-  "manifest_version": 3,
-  "name": "vettx-extension",
-  "version": "1.0",
-  "description": "ok",
+  "manifest_version": 2,
+  "name": "Facebook Marketplace Car Scraper",
+  "version": "1.3",
+  "description": "Extrae datos de autos del Facebook Marketplace",
   "permissions": [
     "activeTab",
-    "management",
-    "nativeMessaging",
     "storage",
-    "scripting",
-    "declarativeContent",
-    "webRequest",
-    "webNavigation",
-    "webRequest",
-    "tabs"
+    "https://www.facebook.com/marketplace/*",
+    "downloads"
   ],
-  "action": {
-    "default_title": "Vettx chrome extension",
+  "browser_action": {
     "default_popup": "popup.html"
   },
-  "background": {
-    "service_worker": "background.js"
-  },
-  "host_permissions": ["http://*/*", "https://*/*"],
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": [
+        "https://www.facebook.com/marketplace/*"
+      ],
       "js": ["content.js"]
     }
-  ]
+  ],
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": false
+  }
 }
+
