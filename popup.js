@@ -59,13 +59,13 @@ function displayProductData(products) {
 
   if (products.length > 5) {
     const moreInfo = document.createElement("p");
-    moreInfo.textContent = `... y ${products.length - 5} productos más. Descargue los datos para ver todos.`;
+    moreInfo.textContent = `... y ${products.length - 5} More products. Download the data to see all.`;
     outputElement.appendChild(moreInfo);
   }
 }
 
 browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log("Mensaje recibido en popup:", message);
+  console.log("Message received in popup:", message);
   if (message.action === "updatePopup") {
     if (message.error) {
       document.getElementById("output").textContent = `Error: ${message.error}`;
@@ -79,7 +79,7 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
-// Verificar si hay datos extraídos al abrir el popup
+// Check if there is data extracted when opening the popup
 browser.storage.local.get("scrapedData", (result) => {
   if (result.scrapedData && result.scrapedData.length > 0) {
     displayProductData(result.scrapedData);

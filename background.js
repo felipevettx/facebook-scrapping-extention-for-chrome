@@ -5,17 +5,17 @@ let isScrapingActive = false;
 let activeTabId = null;
 
 browser.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
-  console.log("Mensaje recibido en background script:", message);
+  console.log("Message received in background script:", message);
   
   if (message.action === "scrapeComplete") {
-    console.log(`Datos recibidos del content script: ${message.payload.length} productos`);
+    console.log(`Data received of content script: ${message.payload.length} products`);
     scrapedData = message.payload;
     isScrapingActive = false;
     
     await browser.storage.local.set({ scrapedData: scrapedData });
     browser.runtime.sendMessage({ action: "updatePopup", data: scrapedData });
   } else if (message.action === "scrapeError") {
-    console.error("Error durante la extracción:", message.error);
+    console.error("Error during the extraction:", message.error);
     isScrapingActive = false;
     browser.runtime.sendMessage({ action: "updatePopup", error: message.error });
   } else if (message.action === "downloadData") {
@@ -46,11 +46,11 @@ browser.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
         throw new Error("No active tab found");
       }
     } catch (error) {
-      console.error("Error al iniciar scraping:", error);
+      console.error("Error to initiate the scraping:", error);
       isScrapingActive = false;
       browser.runtime.sendMessage({ 
         action: "updatePopup", 
-        error: "Error al iniciar la extracción: " + error.message 
+        error: "Error starting extraction: " + error.message 
       });
     }
   } else if (message.action === "stopScraping") {
@@ -59,7 +59,7 @@ browser.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
       try {
         await browser.tabs.sendMessage(activeTabId, { action: "stopScrape" });
       } catch (error) {
-        console.error("Error al detener scraping:", error);
+        console.error("Error sttoped scraping:", error);
       }
     }
   }

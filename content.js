@@ -79,35 +79,35 @@ function scrollPage() {
 }
 
 async function scrapeMarketplace() {
-  console.log("Iniciando extracción de datos del Marketplace...");
+  console.log("Starting data extraction from the Marketplace...");
 
   try {
     await scrollPage();
-    console.log("Página desplazada completamente");
+    console.log("Page scrolled completely");
 
     if (!isScrapingActive) {
-      throw new Error("Scraping detenido por el usuario");
+      throw new Error("Scraping is stop by the user");
     }
 
     const productElements = await waitForElement([
       'a[href^="/marketplace/item/"]'
     ]);
 
-    console.log(`Encontrados ${productElements.length} elementos de producto`);
+    console.log(`Founded ${productElements.length} product Items`);
 
     if (productElements.length === 0) {
-      throw new Error("No se encontraron productos en la página");
+      throw new Error("Don't found products on the page");
     }
 
     const products = Array.from(productElements).map(extractProductData);
 
-    console.log(`Se extrajeron datos de ${products.length} productos`);
+    console.log(`Data was extracted from ${products.length} products`);
     console.log("Muestra de datos extraídos:", products[0]);
 
-    // Enviar los datos al background script
+    //Send data to background script
     browser.runtime.sendMessage({ action: "scrapeComplete", payload: products });
   } catch (error) {
-    console.error("Error durante la extracción:", error);
+    console.error("Error during extraction:", error);
     browser.runtime.sendMessage({ action: "scrapeError", error: error.message });
   }
 }
