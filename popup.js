@@ -1,17 +1,30 @@
 console.log("Popup script cargado");
 
+let isScrapingActive = false;
+
 document.getElementById("scrapeButton").addEventListener("click", async () => {
   console.log("Botón de extracción clickeado");
-  const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
   
   try {
-    document.getElementById("output").textContent = "Extracción iniciada. Por favor, espere...";
-    document.getElementById("scrapeButton").disabled = true;
-    await browser.tabs.sendMessage(tab.id, { action: "scrape" });
+    if (!isScrapingActive) {
+      document.getElementById("output").textContent = "Extracción iniciada. Por favor, espere...";
+      document.getElementById("scrapeButton").textContent = "Stop Scraping";
+      document.getElementById("scrapeButton").classList.add("stop");
+      isScrapingActive = true;
+      await browser.runtime.sendMessage({ action: "startScraping" });
+    } else {
+      document.getElementById("output").textContent = "Deteniendo la extracción...";
+      document.getElementById("scrapeButton").textContent = "Extract Data";
+      document.getElementById("scrapeButton").classList.remove("stop");
+      isScrapingActive = false;
+      await browser.runtime.sendMessage({ action: "stopScraping" });
+    }
   } catch (error) {
-    console.error("Error al iniciar la extracción:", error);
-    document.getElementById("output").textContent = "Error al iniciar la extracción. Asegúrese de estar en una página de Facebook Marketplace.";
-    document.getElementById("scrapeButton").disabled = false;
+    console.error("Error al iniciar/detener la extracción:", error);
+    document.getElementById("output").textContent = "Error al iniciar/detener la extracción. Asegúrese de estar en una página de Facebook Marketplace.";
+    document.getElementById("scrapeButton").textContent = "Extract Data";
+    document.getElementById("scrapeButton").classList.remove("stop");
+    isScrapingActive = false;
   }
 });
 
@@ -36,10 +49,6 @@ function displayProductData(products) {
 
     listItem.innerHTML = `
       <strong>ID:</strong> ${product.id}<br>
-      <strong>Título:</strong> ${product.title}<br>
-      <strong>Precio:</strong> ${product.price}<br>
-      <strong>Ubicación:</strong> ${product.location}<br>
-      <strong>Descripción:</strong> ${product.description}<br>
       <a href="${product.link}" target="_blank">Ver en Facebook</a>
     `;
 
@@ -64,7 +73,9 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
       displayProductData(message.data);
       document.getElementById("downloadButton").style.display = "block";
     }
-    document.getElementById("scrapeButton").disabled = false;
+    document.getElementById("scrapeButton").textContent = "Extract Data";
+    document.getElementById("scrapeButton").classList.remove("stop");
+    isScrapingActive = false;
   }
 });
 
@@ -75,4 +86,3 @@ browser.storage.local.get("scrapedData", (result) => {
     document.getElementById("downloadButton").style.display = "block";
   }
 });
-

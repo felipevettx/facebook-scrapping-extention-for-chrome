@@ -1,9 +1,15 @@
 console.log("Content script cargado");
 
+let isScrapingActive = false;
+
 browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log("Mensaje recibido en content script:", message);
   if (message.action === "scrape") {
+    isScrapingActive = true;
     scrapeMarketplace();
+  } else if (message.action === "stopScrape") {
+    isScrapingActive = false;
+    console.log("Scraping detenido");
   }
 });
 
@@ -12,6 +18,11 @@ function waitForElement(selectors, timeout = 30000) {
     const startTime = Date.now();
     
     function checkElement() {
+      if (!isScrapingActive) {
+        reject(new Error("Scraping detenido por el usuario"));
+        return;
+      }
+
       for (let selector of selectors) {
         const elements = document.querySelectorAll(selector);
         if (elements.length > 0) {
@@ -38,40 +49,9 @@ function extractProductData(productElement) {
 
   const productId = productElement.href.split("/item/")[1]?.split("/")[0] || "ID no disponible";
   
-  const priceElement = productElement.querySelector('span[class*="x193iq5w"][class*="xeuugli"][class*="x13faqbe"]:first-child');
-  let price = priceElement ? priceElement.textContent.trim().replace('$', '').replace(',', '') : 'Precio no disponible';
-  
-  const titleElement = productElement.querySelector('span[class*="x1lliihq x6ikm8r x10wlt62 x1n2onr6"]');
-  let title = 'Título no disponible';
-  let year = 'Año no disponible';
-  
-  if (titleElement) {
-    const fullTitle = titleElement.textContent.trim();
-    const yearMatch = fullTitle.match(/\b(19|20)\d{2}\b/);
-    if (yearMatch) {
-      year = yearMatch[0];
-      title = fullTitle.replace(year, '').trim();
-    } else {
-      title = fullTitle;
-    }
-  }
-
-  const locationElement = productElement.querySelector('span[class*="x1lliihq x6ikm8r x10wlt62 x1n2onr6 xlyipyv xuxw1ft"]');
-  const imageElement = productElement.querySelector('img[class*="xt7dq6l"]');
-
-  // Extraer información adicional si está disponible
-  const additionalInfoElement = productElement.querySelector('span[class*="x1lliihq x6ikm8r x10wlt62 x1n2onr6 xlyipyv xuxw1ft x1j85h84"]:last-child');
-  const additionalInfo = additionalInfoElement ? additionalInfoElement.textContent.trim() : '';
-
   return {
     id: productId,
-    title: title,
-    year: year,
-    price: price,
-    location: locationElement ? locationElement.textContent.trim() : 'Ubicación no disponible',
-    imageUrl: imageElement ? imageElement.src : '',
     link: productElement.href,
-    additionalInfo: additionalInfo
   };
 }
 
@@ -80,6 +60,12 @@ function scrollPage() {
     let totalHeight = 0;
     let distance = 300;
     let timer = setInterval(() => {
+      if (!isScrapingActive) {
+        clearInterval(timer);
+        resolve();
+        return;
+      }
+
       let scrollHeight = document.documentElement.scrollHeight;
       window.scrollBy(0, distance);
       totalHeight += distance;
@@ -98,6 +84,10 @@ async function scrapeMarketplace() {
   try {
     await scrollPage();
     console.log("Página desplazada completamente");
+
+    if (!isScrapingActive) {
+      throw new Error("Scraping detenido por el usuario");
+    }
 
     const productElements = await waitForElement([
       'a[href^="/marketplace/item/"]'
@@ -121,10 +111,3 @@ async function scrapeMarketplace() {
     browser.runtime.sendMessage({ action: "scrapeError", error: error.message });
   }
 }
-
-// Ejecutar scrapeMarketplace automáticamente cuando se carga la página
-window.addEventListener('load', () => {
-  console.log("Página cargada, iniciando extracción automática");
-  setTimeout(scrapeMarketplace, 5000); // Esperar 5 segundos antes de iniciar la extracción
-});
-

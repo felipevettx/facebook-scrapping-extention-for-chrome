@@ -5,15 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta charset="UTF-8" />
     <link rel="stylesheet" href="./styles.css" />
+    <style>
+      #scrapeButton.stop {
+        background-color: #ff4d4d;
+        border-color: #ff4d4d;
+      }
+    </style>
   </head>
   <body>
     <div class="logo">
       <img src="./images/logo.svg" alt="Vettx Logo" />
     </div>
     <h1>Facebook Marketplace Scraper</h1>
+    <div>
+      <button id="scrapeButton">Extract Data</button>
+      <!-- <button id="downloadButton" style="display: none">Download Data</button> -->
+    </div>
 
-    <button id="scrapeButton">Extract Data</button>
-    <button id="downloadButton" style="display:none;">Download Data</button>
     <pre id="output"></pre>
     <script src="popup.js"></script>
   </body>
