@@ -3,7 +3,7 @@ console.log("Popup script loaded");
 let isScrapingActive = false;
 
 document.getElementById("scrapeButton").addEventListener("click", async () => {
-  console.log("Download button clicked");
+  console.log("Scrape button clicked");
   
   try {
     if (!isScrapingActive) {
@@ -13,14 +13,14 @@ document.getElementById("scrapeButton").addEventListener("click", async () => {
       isScrapingActive = true;
       chrome.runtime.sendMessage({ action: "startScraping" });
     } else {
-      document.getElementById("output").textContent = "Stopping the extract...";
+      document.getElementById("output").textContent = "Stopping the extraction...";
       document.getElementById("scrapeButton").textContent = "Extract Data";
       document.getElementById("scrapeButton").classList.remove("stop");
       isScrapingActive = false;
       chrome.runtime.sendMessage({ action: "stopScraping" });
     }
   } catch (error) {
-    console.error("Error to starting/stopping the extraction:", error);
+    console.error("Error starting/stopping the extraction:", error);
     document.getElementById("output").textContent = "Error starting/stopping extraction. Make sure you are on a Facebook Marketplace page.";
     document.getElementById("scrapeButton").textContent = "Extract Data";
     document.getElementById("scrapeButton").classList.remove("stop");
@@ -57,9 +57,13 @@ function displayProductData(products) {
 
   outputElement.appendChild(productList);
 
+  const totalInfo = document.createElement("p");
+  totalInfo.textContent = `Total products scraped: ${products.length}`;
+  outputElement.appendChild(totalInfo);
+
   if (products.length > 5) {
     const moreInfo = document.createElement("p");
-    moreInfo.textContent = `... y ${products.length - 5} More products. Download the data to see all.`;
+    moreInfo.textContent = `... and ${products.length - 5} more products. Download the data to see all.`;
     outputElement.appendChild(moreInfo);
   }
 }
@@ -73,9 +77,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       displayProductData(message.data);
       document.getElementById("downloadButton").style.display = "block";
     }
-    document.getElementById("scrapeButton").textContent = "Extract Data";
-    document.getElementById("scrapeButton").classList.remove("stop");
-    isScrapingActive = false;
+    if (message.action !== "scrapePartialComplete") {
+      document.getElementById("scrapeButton").textContent = "Extract Data";
+      document.getElementById("scrapeButton").classList.remove("stop");
+      isScrapingActive = false;
+    }
   }
 });
 
@@ -86,3 +92,4 @@ chrome.storage.local.get("scrapedData", (result) => {
     document.getElementById("downloadButton").style.display = "block";
   }
 });
+

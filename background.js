@@ -7,13 +7,17 @@ let activeTabId = null;
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log("Message received in background script:", message);
   
-  if (message.action === "scrapeComplete") {
-    console.log(`Data received of content script: ${message.payload.length} products`);
+  if (message.action === "scrapeComplete" || message.action === "scrapePartialComplete") {
+    console.log(`Data received from content script: ${message.payload.length} products`);
     scrapedData = message.payload;
-    isScrapingActive = false;
     
     chrome.storage.local.set({ scrapedData: scrapedData });
     chrome.runtime.sendMessage({ action: "updatePopup", data: scrapedData });
+    
+    if (message.action === "scrapeComplete") {
+      isScrapingActive = false;
+      console.log("Scraping completed. Total products:", scrapedData.length);
+    }
   } else if (message.action === "scrapeError") {
     console.error("Error during the extraction:", message.error);
     isScrapingActive = false;
@@ -65,3 +69,4 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     activeTabId = tabId;
   }
 });
+
