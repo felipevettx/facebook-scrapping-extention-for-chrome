@@ -2,7 +2,7 @@ console.log("Content script Loaded");
 
 let isScrapingActive = false;
 
-browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log("Message received in content script:", message);
   if (message.action === "scrape") {
     isScrapingActive = true;
@@ -105,9 +105,9 @@ async function scrapeMarketplace() {
     console.log("Data extracted:", products[0]);
 
     //Send data to background script
-    browser.runtime.sendMessage({ action: "scrapeComplete", payload: products });
+    chrome.runtime.sendMessage({ action: "scrapeComplete", payload: products });
   } catch (error) {
     console.error("Error during extraction:", error);
-    browser.runtime.sendMessage({ action: "scrapeError", error: error.message });
+    chrome.runtime.sendMessage({ action: "scrapeError", error: error.message });
   }
 }

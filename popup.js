@@ -11,13 +11,13 @@ document.getElementById("scrapeButton").addEventListener("click", async () => {
       document.getElementById("scrapeButton").textContent = "Stop Scraping";
       document.getElementById("scrapeButton").classList.add("stop");
       isScrapingActive = true;
-      await browser.runtime.sendMessage({ action: "startScraping" });
+      chrome.runtime.sendMessage({ action: "startScraping" });
     } else {
       document.getElementById("output").textContent = "Stopping the extract...";
       document.getElementById("scrapeButton").textContent = "Extract Data";
       document.getElementById("scrapeButton").classList.remove("stop");
       isScrapingActive = false;
-      await browser.runtime.sendMessage({ action: "stopScraping" });
+      chrome.runtime.sendMessage({ action: "stopScraping" });
     }
   } catch (error) {
     console.error("Error to starting/stopping the extraction:", error);
@@ -30,7 +30,7 @@ document.getElementById("scrapeButton").addEventListener("click", async () => {
 
 document.getElementById("downloadButton").addEventListener("click", () => {
   console.log("Download button clicked");
-  browser.runtime.sendMessage({ action: "downloadData" });
+  chrome.runtime.sendMessage({ action: "downloadData" });
 });
 
 function displayProductData(products) {
@@ -64,7 +64,7 @@ function displayProductData(products) {
   }
 }
 
-browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log("Message received in popup:", message);
   if (message.action === "updatePopup") {
     if (message.error) {
@@ -80,7 +80,7 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 // Check if there is data extracted when opening the popup
-browser.storage.local.get("scrapedData", (result) => {
+chrome.storage.local.get("scrapedData", (result) => {
   if (result.scrapedData && result.scrapedData.length > 0) {
     displayProductData(result.scrapedData);
     document.getElementById("downloadButton").style.display = "block";
