@@ -1,27 +1,27 @@
-console.log("Popup script cargado");
+console.log("Popup script loaded");
 
 let isScrapingActive = false;
 
 document.getElementById("scrapeButton").addEventListener("click", async () => {
-  console.log("Botón de extracción clickeado");
+  console.log("Download button clicked");
   
   try {
     if (!isScrapingActive) {
-      document.getElementById("output").textContent = "Extracción iniciada. Por favor, espere...";
+      document.getElementById("output").textContent = "Extracting is starting. Please, wait...";
       document.getElementById("scrapeButton").textContent = "Stop Scraping";
       document.getElementById("scrapeButton").classList.add("stop");
       isScrapingActive = true;
       await browser.runtime.sendMessage({ action: "startScraping" });
     } else {
-      document.getElementById("output").textContent = "Deteniendo la extracción...";
+      document.getElementById("output").textContent = "Stopping the extract...";
       document.getElementById("scrapeButton").textContent = "Extract Data";
       document.getElementById("scrapeButton").classList.remove("stop");
       isScrapingActive = false;
       await browser.runtime.sendMessage({ action: "stopScraping" });
     }
   } catch (error) {
-    console.error("Error al iniciar/detener la extracción:", error);
-    document.getElementById("output").textContent = "Error al iniciar/detener la extracción. Asegúrese de estar en una página de Facebook Marketplace.";
+    console.error("Error to starting/stopping the extraction:", error);
+    document.getElementById("output").textContent = "Error starting/stopping extraction. Make sure you are on a Facebook Marketplace page.";
     document.getElementById("scrapeButton").textContent = "Extract Data";
     document.getElementById("scrapeButton").classList.remove("stop");
     isScrapingActive = false;
@@ -29,7 +29,7 @@ document.getElementById("scrapeButton").addEventListener("click", async () => {
 });
 
 document.getElementById("downloadButton").addEventListener("click", () => {
-  console.log("Botón de descarga clickeado");
+  console.log("Download button clicked");
   browser.runtime.sendMessage({ action: "downloadData" });
 });
 

@@ -1,4 +1,4 @@
-console.log("Background script cargado");
+console.log("Background script loaded");
 
 let scrapedData = [];
 let isScrapingActive = false;
@@ -20,7 +20,7 @@ browser.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
     browser.runtime.sendMessage({ action: "updatePopup", error: message.error });
   } else if (message.action === "downloadData") {
     if (!scrapedData || scrapedData.length === 0) {
-      console.log("No hay datos para descargar");
+      console.log("There is no data to download");
       return;
     }
     
@@ -59,7 +59,7 @@ browser.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
       try {
         await browser.tabs.sendMessage(activeTabId, { action: "stopScrape" });
       } catch (error) {
-        console.error("Error sttoped scraping:", error);
+        console.error("Error stopped scraping:", error);
       }
     }
   }

@@ -1,15 +1,15 @@
-console.log("Content script cargado");
+console.log("Content script Loaded");
 
 let isScrapingActive = false;
 
 browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log("Mensaje recibido en content script:", message);
+  console.log("Message received in content script:", message);
   if (message.action === "scrape") {
     isScrapingActive = true;
     scrapeMarketplace();
   } else if (message.action === "stopScrape") {
     isScrapingActive = false;
-    console.log("Scraping detenido");
+    console.log("Scrapping stopped");
   }
 });
 
@@ -19,22 +19,22 @@ function waitForElement(selectors, timeout = 30000) {
     
     function checkElement() {
       if (!isScrapingActive) {
-        reject(new Error("Scraping detenido por el usuario"));
+        reject(new Error("Scrapping stopped by the User"));
         return;
       }
 
       for (let selector of selectors) {
         const elements = document.querySelectorAll(selector);
         if (elements.length > 0) {
-          console.log(`Elemento encontrado: ${selector}`);
+          console.log(`Item founded: ${selector}`);
           resolve(elements);
           return;
         }
       }
       
       if (Date.now() - startTime > timeout) {
-        console.log(`Tiempo de espera agotado. Selectores probados: ${selectors.join(', ')}`);
-        reject(new Error(`Elementos ${selectors.join(', ')} no encontrados después de ${timeout}ms`));
+        console.log(`Timed out. Selectors tested: ${selectors.join(', ')}`);
+        reject(new Error(`Items ${selectors.join(', ')} Don't founded of ${timeout}ms`));
       } else {
         setTimeout(checkElement, 500);
       }
@@ -45,9 +45,9 @@ function waitForElement(selectors, timeout = 30000) {
 }
 
 function extractProductData(productElement) {
-  console.log("Extrayendo datos de producto:", productElement);
+  console.log("Extracting product data:", productElement);
 
-  const productId = productElement.href.split("/item/")[1]?.split("/")[0] || "ID no disponible";
+  const productId = productElement.href.split("/item/")[1]?.split("/")[0] || "ID don't available";
   
   return {
     id: productId,
@@ -102,7 +102,7 @@ async function scrapeMarketplace() {
     const products = Array.from(productElements).map(extractProductData);
 
     console.log(`Data was extracted from ${products.length} products`);
-    console.log("Muestra de datos extraídos:", products[0]);
+    console.log("Data extracted:", products[0]);
 
     //Send data to background script
     browser.runtime.sendMessage({ action: "scrapeComplete", payload: products });
