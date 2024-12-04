@@ -14,33 +14,28 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     chrome.storage.local.set({ scrapedData: scrapedData });
     chrome.runtime.sendMessage({ action: "updatePopup", data: scrapedData });
     
+    // Mostrar un resumen detallado en la consola
+    console.log("Scraped data summary:");
+    console.log(`Total products scraped: ${scrapedData.length}`);
+    console.log("Sample product:");
+    console.log(JSON.stringify(scrapedData[0], null, 2));
+    console.log("Full JSON data:");
+    console.log(JSON.stringify(scrapedData, null, 2));
+    
     if (message.action === "scrapeComplete") {
       isScrapingActive = false;
-      console.log("Scraping completed. Total products:", scrapedData.length);
+      console.log("Scraping completed. Final count of products scraped:", scrapedData.length);
+      if (activeTabId) {
+        chrome.tabs.sendMessage(activeTabId, { action: "stopScrape" });
+      }
     }
   } else if (message.action === "scrapeError") {
     console.error("Error during the extraction:", message.error);
     isScrapingActive = false;
     chrome.runtime.sendMessage({ action: "updatePopup", error: message.error });
-  } else if (message.action === "downloadData") {
-    if (!scrapedData || scrapedData.length === 0) {
-      console.log("There is no data to download");
-      return;
-    }
-    
-    const jsonString = JSON.stringify(scrapedData, null, 2);
-    const blob = new Blob([jsonString], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    
-    chrome.downloads.download({
-      url: url,
-      filename: "facebook_marketplace_data.json",
-      saveAs: true
-    });
-    
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
   } else if (message.action === "startScraping") {
     isScrapingActive = true;
+    scrapedData = []; // Reset scraped data when starting a new scrape
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs[0]) {
         activeTabId = tabs[0].id;

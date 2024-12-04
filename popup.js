@@ -28,11 +28,6 @@ document.getElementById("scrapeButton").addEventListener("click", async () => {
   }
 });
 
-document.getElementById("downloadButton").addEventListener("click", () => {
-  console.log("Download button clicked");
-  chrome.runtime.sendMessage({ action: "downloadData" });
-});
-
 function displayProductData(products) {
   const outputElement = document.getElementById("output");
   outputElement.innerHTML = "";
@@ -63,7 +58,7 @@ function displayProductData(products) {
 
   if (products.length > 5) {
     const moreInfo = document.createElement("p");
-    moreInfo.textContent = `... and ${products.length - 5} more products. Download the data to see all.`;
+    moreInfo.textContent = `... and ${products.length - 5} more products. Check the console for full data.`;
     outputElement.appendChild(moreInfo);
   }
 }
@@ -75,7 +70,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       document.getElementById("output").textContent = `Error: ${message.error}`;
     } else {
       displayProductData(message.data);
-      document.getElementById("downloadButton").style.display = "block";
     }
     if (message.action !== "scrapePartialComplete") {
       document.getElementById("scrapeButton").textContent = "Extract Data";
@@ -89,7 +83,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 chrome.storage.local.get("scrapedData", (result) => {
   if (result.scrapedData && result.scrapedData.length > 0) {
     displayProductData(result.scrapedData);
-    document.getElementById("downloadButton").style.display = "block";
   }
 });
 

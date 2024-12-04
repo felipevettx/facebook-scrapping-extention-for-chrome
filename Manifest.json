@@ -7,10 +7,12 @@
     "activeTab",
     "storage",
     "tabs",
-    "downloads"
+    "downloads",
+    "scripting",
+    "*://www.facebook.com/marketplace/*"
   ],
   "host_permissions": [
-    "https://*.facebook.com/*"
+    "https://*.facebook.com/*", "https://www.facebook.com/marketplace/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -20,7 +22,7 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://*.facebook.com/*"],
+      "matches": ["https://*.facebook.com/*", "<all_urls>"],
       "js": ["content.js"]
     }
   ]

@@ -2,11 +2,11 @@ console.log("Content script Loaded");
 
 let isScrapingActive = false;
 let totalProductsScraped = 0;
-const MAX_PRODUCTS = 1000;
-const SCROLL_INTERVAL = 1000; // intervalo del scroll
-const SCROLL_DISTANCE = 300; // maneja el desplazamiento en px 
-const LOAD_DELAY = 3000; // Aumentado a 3 segundos
-const MAX_RETRIES = 5; // Número máximo de reintentos
+const MAX_PRODUCTS = 100;
+const SCROLL_INTERVAL = 800;
+const SCROLL_DISTANCE = 800;
+const LOAD_DELAY = 3000;
+const MAX_RETRIES = 5;
 
 function waitForPageLoad() {
   return new Promise((resolve) => {
@@ -61,13 +61,12 @@ function waitForElement(selectors, timeout = 30000) {
 }
 
 function extractProductData(productElement) {
-  console.log("Extracting product data:", productElement);
-
-  const productId = productElement.href.split("/item/")[1]?.split("/")[0] || "ID not available";
+  const link = productElement.href;
+  const productId = link.split("/item/")[1]?.split("/")[0] || "ID not available";
   
   return {
     id: productId,
-    link: productElement.href,
+    link: link
   };
 }
 
@@ -100,6 +99,7 @@ async function scrapeMarketplace() {
   totalProductsScraped = 0;
   let allProducts = [];
   let retryCount = 0;
+  let noNewProductsCount = 0;
 
   try {
     while (isScrapingActive && totalProductsScraped < MAX_PRODUCTS) {
@@ -137,15 +137,16 @@ async function scrapeMarketplace() {
         console.log(`New unique products found: ${newProducts.length}`);
 
         if (newProducts.length === 0) {
-          if (retryCount >= MAX_RETRIES) {
-            console.log("Max retries reached. Stopping scrape.");
+          noNewProductsCount++;
+          if (noNewProductsCount >= MAX_RETRIES) {
+            console.log("No new products found after multiple attempts. Stopping scrape.");
             break;
           }
-          retryCount++;
-          console.log(`No new products found. Retry ${retryCount}/${MAX_RETRIES}`);
+          console.log(`No new products found. Attempt ${noNewProductsCount}/${MAX_RETRIES}`);
           continue;
         }
 
+        noNewProductsCount = 0; // Reset count when new products are found
         allProducts = [...allProducts, ...newProducts];
         totalProductsScraped = allProducts.length;
 
@@ -172,7 +173,7 @@ async function scrapeMarketplace() {
       }
     }
 
-    console.log(`Data extracted from ${totalProductsScraped} products`);
+    console.log(`Data extraction completed. Total products scraped: ${totalProductsScraped}`);
     if (allProducts.length > 0) {
       console.log("Sample data extracted:", allProducts[0]);
     }
@@ -182,6 +183,8 @@ async function scrapeMarketplace() {
   } catch (error) {
     console.error("Fatal error during extraction:", error);
     chrome.runtime.sendMessage({ action: "scrapeError", error: error.message });
+  } finally {
+    isScrapingActive = false;
   }
 }
 
