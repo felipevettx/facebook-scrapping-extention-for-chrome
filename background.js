@@ -14,7 +14,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     chrome.storage.local.set({ scrapedData: scrapedData });
     chrome.runtime.sendMessage({ action: "updatePopup", data: scrapedData });
     
-    // Mostrar un resumen detallado en la consola
+    
     console.log("Scraped data summary:");
     console.log(`Total products scraped: ${scrapedData.length}`);
     console.log("Sample product:");
