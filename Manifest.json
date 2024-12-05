@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Facebook Marketplace Scraper",
+  "name": "AutoMarket Listings Downloader",
   "version": "1.0",
-  "description": "Scrape data from Facebook Marketplace",
+  "description": "Downloader of data from Facebook Marketplace",
   "permissions": [
     "activeTab",
     "storage",
