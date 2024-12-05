@@ -85,4 +85,3 @@ chrome.storage.local.get("scrapedData", (result) => {
     displayProductData(result.scrapedData);
   }
 });
-

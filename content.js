@@ -3,17 +3,17 @@ console.log("Content script Loaded");
 let isScrapingActive = false;
 let totalProductsScraped = 0;
 const MAX_PRODUCTS = 50;
-const SCROLL_INTERVAL = 2300;
+const SCROLL_INTERVAL = 2400;
 const SCROLL_DISTANCE = 800;
 const LOAD_DELAY = 5000;
 const MAX_RETRIES = 10;
 
 function waitForPageLoad() {
   return new Promise((resolve) => {
-    if (document.readyState === "complete") {
+    if (document.readyState === 'complete') {
       resolve();
     } else {
-      window.addEventListener("load", resolve);
+      window.addEventListener('load', resolve);
     }
   });
 }
@@ -32,7 +32,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 function waitForElement(selectors, timeout = 30000) {
   return new Promise((resolve, reject) => {
     const startTime = Date.now();
-
+    
     function checkElement() {
       if (!isScrapingActive) {
         reject(new Error("Scraping stopped by the User"));
@@ -47,40 +47,38 @@ function waitForElement(selectors, timeout = 30000) {
           return;
         }
       }
-
+      
       if (Date.now() - startTime > timeout) {
-        console.log(`Timed out. Selectors tested: ${selectors.join(", ")}`);
-        reject(
-          new Error(
-            `Items ${selectors.join(", ")} not found after ${timeout}ms`
-          )
-        );
+        console.log(`Timed out. Selectors tested: ${selectors.join(', ')}`);
+        reject(new Error(`Items ${selectors.join(', ')} not found after ${timeout}ms`));
       } else {
         setTimeout(checkElement, 500);
       }
     }
-
+    
     checkElement();
   });
 }
 
 function extractProductData(productElement) {
   const link = productElement.href;
-  const productId =
-    link.split("/item/")[1]?.split("/")[0] || "ID not available";
-
+  const productId = link.split("/item/")[1]?.split("/")[0] || "ID not available";
+  
   return {
     id: productId,
-    link: link,
+    link: link
   };
 }
 
 function scrollPage() {
   return new Promise((resolve) => {
     let totalHeight = 0;
-const randomScrollInterval = SCROLL_INTERVAL + (Math.random() * 500)
+    const randomScrollInterval = SCROLL_INTERVAL + Math.random() * 500;
     let timer = setInterval(() => {
-      if (!isScrapingActive) {
+      if (!isScrapingActive || totalProductsScraped >= MAX_PRODUCTS) {
+        console.log(
+          `Scroll stopped. actual items: ${totalProductsScraped}/${MAX_PRODUCTS}`
+        );
         clearInterval(timer);
         resolve();
         return;
@@ -97,7 +95,6 @@ const randomScrollInterval = SCROLL_INTERVAL + (Math.random() * 500)
     }, randomScrollInterval);
   });
 }
-
 async function scrapeMarketplace() {
   console.log("Waiting for page to load completely...");
   await waitForPageLoad();
@@ -110,7 +107,7 @@ async function scrapeMarketplace() {
   try {
     while (isScrapingActive && totalProductsScraped < MAX_PRODUCTS) {
       await scrollPage();
-      await new Promise((resolve) => setTimeout(resolve, LOAD_DELAY));
+      await new Promise(resolve => setTimeout(resolve, LOAD_DELAY));
       console.log("Page scrolled and waiting for new products to load");
 
       if (!isScrapingActive) {
@@ -119,7 +116,7 @@ async function scrapeMarketplace() {
 
       try {
         const productElements = await waitForElement([
-          'a[href^="/marketplace/item/"]',
+          'a[href^="/marketplace/item/"]'
         ]);
 
         console.log(`Found ${productElements.length} product items`);
@@ -138,21 +135,17 @@ async function scrapeMarketplace() {
 
         const newProducts = Array.from(productElements)
           .map(extractProductData)
-          .filter((product) => !allProducts.some((p) => p.id === product.id));
+          .filter(product => !allProducts.some(p => p.id === product.id));
 
         console.log(`New unique products found: ${newProducts.length}`);
 
         if (newProducts.length === 0) {
           noNewProductsCount++;
           if (noNewProductsCount >= MAX_RETRIES) {
-            console.log(
-              "No new products found after multiple attempts. Stopping scrape."
-            );
+            console.log("No new products found after multiple attempts. Stopping scrape.");
             break;
           }
-          console.log(
-            `No new products found. Attempt ${noNewProductsCount}/${MAX_RETRIES}`
-          );
+          console.log(`No new products found. Attempt ${noNewProductsCount}/${MAX_RETRIES}`);
           continue;
         }
 
@@ -163,15 +156,13 @@ async function scrapeMarketplace() {
         console.log(`Total products scraped: ${totalProductsScraped}`);
 
         // Send partial results to background script
-        chrome.runtime.sendMessage({
-          action: "scrapePartialComplete",
-          payload: allProducts,
+        chrome.runtime.sendMessage({ 
+          action: "scrapePartialComplete", 
+          payload: allProducts 
         });
 
         if (totalProductsScraped >= MAX_PRODUCTS) {
-          console.log(
-            `Reached maximum number of products (${MAX_PRODUCTS}). Stopping scrape.`
-          );
+          console.log(`Reached maximum number of products (${MAX_PRODUCTS}). Stopping scrape.`);
           break;
         }
       } catch (error) {
@@ -185,18 +176,13 @@ async function scrapeMarketplace() {
       }
     }
 
-    console.log(
-      `Data extraction completed. Total products scraped: ${totalProductsScraped}`
-    );
+    console.log(`Data extraction completed. Total products scraped: ${totalProductsScraped}`);
     if (allProducts.length > 0) {
       console.log("Sample data extracted:", allProducts[0]);
     }
 
     // Send final results to background script
-    chrome.runtime.sendMessage({
-      action: "scrapeComplete",
-      payload: allProducts,
-    });
+    chrome.runtime.sendMessage({ action: "scrapeComplete", payload: allProducts });
   } catch (error) {
     console.error("Fatal error during extraction:", error);
     chrome.runtime.sendMessage({ action: "scrapeError", error: error.message });
