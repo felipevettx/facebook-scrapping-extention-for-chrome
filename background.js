@@ -6,14 +6,18 @@ let activeTabId = null;
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log("Message received in background script:", message);
-  
+
   if (message.action === "scrapeComplete" || message.action === "scrapePartialComplete") {
     console.log(`Data received from content script: ${message.payload.length} products`);
-    scrapedData = message.payload;
     
+    // Combine new data with existing data
+    scrapedData = [...scrapedData, ...message.payload.filter(product => 
+      !scrapedData.some(p => p.id === product.id)
+    )];
+
     chrome.storage.local.set({ scrapedData: scrapedData });
     chrome.runtime.sendMessage({ action: "updatePopup", data: scrapedData });
-    
+
     // Mostrar un resumen detallado en la consola
     console.log("Scraped data summary:");
     console.log(`Total products scraped: ${scrapedData.length}`);
@@ -21,7 +25,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log(JSON.stringify(scrapedData[0], null, 2));
     console.log("Full JSON data:");
     console.log(JSON.stringify(scrapedData, null, 2));
-    
+
     if (message.action === "scrapeComplete") {
       isScrapingActive = false;
       console.log("Scraping completed. Final count of products scraped:", scrapedData.length);
@@ -55,7 +59,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       chrome.tabs.sendMessage(activeTabId, { action: "stopScrape" });
     }
   }
-  
+
   return true;
 });
 

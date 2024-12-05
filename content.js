@@ -2,10 +2,10 @@ console.log("Content script Loaded");
 
 let isScrapingActive = false;
 let totalProductsScraped = 0;
-const MAX_PRODUCTS = 50;
+const MAX_PRODUCTS = 500;
 const SCROLL_INTERVAL = 2400;
 const SCROLL_DISTANCE = 800;
-const LOAD_DELAY = 5000;
+const LOAD_DELAY = 3000; // Ajustado para mayor eficiencia
 const MAX_RETRIES = 10;
 
 function waitForPageLoad() {
@@ -32,7 +32,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 function waitForElement(selectors, timeout = 30000) {
   return new Promise((resolve, reject) => {
     const startTime = Date.now();
-    
+
     function checkElement() {
       if (!isScrapingActive) {
         reject(new Error("Scraping stopped by the User"));
@@ -47,7 +47,7 @@ function waitForElement(selectors, timeout = 30000) {
           return;
         }
       }
-      
+
       if (Date.now() - startTime > timeout) {
         console.log(`Timed out. Selectors tested: ${selectors.join(', ')}`);
         reject(new Error(`Items ${selectors.join(', ')} not found after ${timeout}ms`));
@@ -55,7 +55,7 @@ function waitForElement(selectors, timeout = 30000) {
         setTimeout(checkElement, 500);
       }
     }
-    
+
     checkElement();
   });
 }
@@ -63,7 +63,7 @@ function waitForElement(selectors, timeout = 30000) {
 function extractProductData(productElement) {
   const link = productElement.href;
   const productId = link.split("/item/")[1]?.split("/")[0] || "ID not available";
-  
+
   return {
     id: productId,
     link: link
@@ -76,9 +76,7 @@ function scrollPage() {
     const randomScrollInterval = SCROLL_INTERVAL + Math.random() * 500;
     let timer = setInterval(() => {
       if (!isScrapingActive || totalProductsScraped >= MAX_PRODUCTS) {
-        console.log(
-          `Scroll stopped. actual items: ${totalProductsScraped}/${MAX_PRODUCTS}`
-        );
+        console.log(`Scroll stopped. actual items: ${totalProductsScraped}/${MAX_PRODUCTS}`);
         clearInterval(timer);
         resolve();
         return;
@@ -95,6 +93,7 @@ function scrollPage() {
     }, randomScrollInterval);
   });
 }
+
 async function scrapeMarketplace() {
   console.log("Waiting for page to load completely...");
   await waitForPageLoad();
@@ -122,11 +121,11 @@ async function scrapeMarketplace() {
         console.log(`Found ${productElements.length} product items`);
 
         if (productElements.length === 0) {
+          retryCount++;
           if (retryCount >= MAX_RETRIES) {
             console.log("Max retries reached. Stopping scrape.");
             break;
           }
-          retryCount++;
           console.log(`No products found. Retry ${retryCount}/${MAX_RETRIES}`);
           continue;
         }
@@ -167,11 +166,11 @@ async function scrapeMarketplace() {
         }
       } catch (error) {
         console.error("Error during product extraction:", error);
+        retryCount++;
         if (retryCount >= MAX_RETRIES) {
           console.log("Max retries reached. Stopping scrape.");
           break;
         }
-        retryCount++;
         console.log(`Error occurred. Retry ${retryCount}/${MAX_RETRIES}`);
       }
     }

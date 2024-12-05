@@ -8,8 +8,7 @@
     "storage",
     "tabs",
     "downloads",
-    "scripting",
-    "*://www.facebook.com/marketplace/*"
+    "scripting"
   ],
   "host_permissions": [
     "https://*.facebook.com/*", "https://www.facebook.com/marketplace/*"
