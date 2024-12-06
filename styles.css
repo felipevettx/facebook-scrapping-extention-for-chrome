@@ -3,6 +3,7 @@ body {
   padding: 6px;
   font-family: Arial, sans-serif;
   margin: 0;
+  box-shadow: none;
 }
 h1 {
   font-size: 18px;
@@ -21,7 +22,8 @@ button {
   transition: background-color 0.3s ease, color 0.3s ease;
   cursor: pointer;
 }
-button:hover, button:focus {
+button:hover,
+button:focus {
   background-color: #4189c8;
   color: white;
   outline: none;
@@ -46,4 +48,11 @@ button:hover, button:focus {
 .logo img {
   max-width: 100px;
   height: auto;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  background-color: #ccc;
+  border: #ccc;
+  color: white;
 }

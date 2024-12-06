@@ -1,14 +1,16 @@
 {
   "manifest_version": 3,
-  "name": "AutoMarket Listings Downloader",
-  "version": "1.0",
+  "name": "Vettx Listings Downloader",
+  "version": "1.4",
   "description": "Downloader of data from Facebook Marketplace",
   "permissions": [
     "activeTab",
     "storage",
     "tabs",
     "downloads",
-    "scripting"
+    "scripting",
+    "cookies",
+    "https://www.facebook.com/"
   ],
   "host_permissions": [
     "https://*.facebook.com/*", "https://www.facebook.com/marketplace/*"

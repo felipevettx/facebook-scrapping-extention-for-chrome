@@ -2,29 +2,110 @@ console.log("Popup script loaded");
 
 let isScrapingActive = false;
 
+//validación de login en facebook.
+let loginStatus = false;
+chrome.cookies.get(
+  { url: "https://www.facebook.com", name: "c_user" },
+  (cookie) => {
+    console.log("Cookie retrieved:", cookie);
+    if (cookie) {
+      console.log("User is login on Facebook. ID:", cookie.value);
+      loginStatus = true;
+      handleLoginSuccess(cookie.value);
+      enableScrapeButton();
+    } else {
+      console.log("User not logged in");
+      alert("Debes estar logueado en facebook");
+      notfyUserTologin();
+      disableScrapeButton();
+    }
+  }
+);
+// if the User is logged, enable Button:
+function enableScrapeButton() {
+  const scrapeButton = document.getElementById("scrapeButton");
+  scrapeButton.disabled = false;
+  scrapeButton.style.opacity = "1";
+  scrapeButton.title = "";
+}
+
+// disabled the Button if the user is not logged:
+function disableScrapeButton() {
+  const scrapeButton = document.getElementById("scrapeButton");
+  scrapeButton.disabled = true;
+  scrapeButton.style.opacity = "0.6";
+  scrapeButton.title = "Please, Login on facebook for use the extension";
+}
+// success case of login
+function handleLoginSuccess(userId) {
+  console.log("UserID:", userId);
+}
+//notificar al usuario que debe iniciar sesión:
+
+function notfyUserTologin() {
+  console.log("please log in to Facebook to use this extension");
+  const outputElement = document.getElementById("output");
+  outputElement.textContent = "debes estar logueado en facebook para usar la extension"
+}
+//validation if the user is logged on vettx
+
+
+///////// logic for the scraping button
 document.getElementById("scrapeButton").addEventListener("click", async () => {
   console.log("Scrape button clicked");
-  
+
   try {
     if (!isScrapingActive) {
-      document.getElementById("output").textContent = "Extracting is starting. Please, wait...";
+      document.getElementById("output").textContent =
+        "Extracting is starting. Please, wait...";
       document.getElementById("scrapeButton").textContent = "Stop Scraping";
       document.getElementById("scrapeButton").classList.add("stop");
       isScrapingActive = true;
-      chrome.runtime.sendMessage({ action: "startScraping" });
+      // Guarda el estado del botón
+      chrome.storage.local.set({ isScrapingActive: true }, () => {
+        if (chrome.runtime.lastError) {
+          console.error(
+            "Error setting isScrapingActive:",
+            chrome.runtime.lastError
+          );
+        }
+      });
+      chrome.runtime.sendMessage({ action: "startScraping" }, (response) => {
+        if (chrome.runtime.lastError) {
+          throw new Error("Background script not responding");
+        }
+        console.log("Start scraping response:", response);
+      });
     } else {
-      document.getElementById("output").textContent = "Stopping the extraction...";
+      document.getElementById("output").textContent =
+        "Stopping the extraction...";
       document.getElementById("scrapeButton").textContent = "Extract Data";
       document.getElementById("scrapeButton").classList.remove("stop");
       isScrapingActive = false;
-      chrome.runtime.sendMessage({ action: "stopScraping" });
+      // Guarda el estado del botón
+      chrome.storage.local.set({ isScrapingActive: false }, () => {
+        if (chrome.runtime.lastError) {
+          console.error(
+            "Error setting isScrapingActive:",
+            chrome.runtime.lastError
+          );
+        }
+      });
+      chrome.runtime.sendMessage({ action: "stopScraping" }, (response) => {
+        if (chrome.runtime.lastError) {
+          throw new Error("Background script not responding");
+        }
+        console.log("Stop scraping response:", response);
+      });
     }
   } catch (error) {
     console.error("Error starting/stopping the extraction:", error);
-    document.getElementById("output").textContent = "Error starting/stopping extraction. Make sure you are on a Facebook Marketplace page.";
+    document.getElementById("output").textContent =
+      "Error starting/stopping extraction. Make sure you are on a Facebook Marketplace page.";
     document.getElementById("scrapeButton").textContent = "Extract Data";
     document.getElementById("scrapeButton").classList.remove("stop");
     isScrapingActive = false;
+    chrome.storage.local.set({ isScrapingActive: false });
   }
 });
 
@@ -36,7 +117,7 @@ function displayProductData(products) {
   productList.style.listStyleType = "none";
   productList.style.padding = "0";
 
-  products.slice(0, 5).forEach(product => {
+  products.slice(0, 5).forEach((product) => {
     const listItem = document.createElement("li");
     listItem.style.marginBottom = "10px";
     listItem.style.borderBottom = "1px solid #ccc";
@@ -58,7 +139,9 @@ function displayProductData(products) {
 
   if (products.length > 5) {
     const moreInfo = document.createElement("p");
-    moreInfo.textContent = `... and ${products.length - 5} more products. Check the console for full data.`;
+    moreInfo.textContent = `... and ${
+      products.length - 5
+    } more products. Check the console for full data.`;
     outputElement.appendChild(moreInfo);
   }
 }
@@ -80,8 +163,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 // Check if there is data extracted when opening the popup
-chrome.storage.local.get("scrapedData", (result) => {
+chrome.storage.local.get(["scrapedData", "isScrapingActive"], (result) => {
   if (result.scrapedData && result.scrapedData.length > 0) {
     displayProductData(result.scrapedData);
+  }
+  if (result.isScrapingActive) {
+    document.getElementById("scrapeButton").textContent = "Stop Scraping";
+    document.getElementById("scrapeButton").classList.add("stop");
+    isScrapingActive = true;
   }
 });

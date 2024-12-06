@@ -2,12 +2,12 @@ console.log("Content script Loaded");
 
 let isScrapingActive = false;
 let totalProductsScraped = 0;
-const MAX_PRODUCTS = 500;
-const SCROLL_INTERVAL = 2000;
-const SCROLL_DISTANCE = Math.ceil(window.innerHeight * 0.8);
-const LOAD_DELAY = 5000;
-const MAX_RETRIES = 15;
-
+// const MAX_PRODUCTS = 500;
+const SCROLL_INTERVAL = 1500;
+const SCROLL_DISTANCE = Math.ceil(window.innerHeight * 0.7);
+const LOAD_DELAY = 3000;
+const MAX_RETRIES = 5;
+const MAX_TIME = 280000;
 function waitForPageLoad() {
   return new Promise((resolve) => {
     if (document.readyState === "complete") {
@@ -29,7 +29,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
-function waitForElement(selectors, timeout = 15000) {
+function waitForElement(selectors, timeout = 30000) {
   return new Promise((resolve, reject) => {
     const startTime = Date.now();
 
@@ -56,7 +56,7 @@ function waitForElement(selectors, timeout = 15000) {
           )
         );
       } else {
-        setTimeout(checkElement, 500);
+        setTimeout(checkElement, 300); //tiempo de espera entre verificaciones
       }
     }
 
@@ -80,9 +80,9 @@ function scrollPage() {
     let totalHeight = 0;
     const randomScrollInterval = SCROLL_INTERVAL + Math.random() * 500;
     let timer = setInterval(() => {
-      if (!isScrapingActive || totalProductsScraped >= MAX_PRODUCTS) {
+      if (!isScrapingActive) {
         console.log(
-          `Scroll stopped. actual items: ${totalProductsScraped}/${MAX_PRODUCTS}`
+          `Scroll stopped. actual items: ${totalProductsScraped}`
         );
         clearInterval(timer);
         resolve();
@@ -109,16 +109,23 @@ async function scrapeMarketplace() {
   let allProducts = [];
   let retryCount = 0;
   let noNewProductsCount = 0;
+  const startTime = Date.now()
 
   try {
-    while (isScrapingActive && totalProductsScraped < MAX_PRODUCTS) {
+    while (isScrapingActive) {
+      //logica para ver si se excede el limite de tiempo 
+
+      if (Date.now() - startTime >= MAX_TIME){
+        console.log("TIme limit reached. Stopping scrape");
+        break;
+      }
       await scrollPage();
 
       await new Promise((resolve) => setTimeout(resolve, LOAD_DELAY));
       console.log("Page scrolled and waiting for new products to load");
 
       if (!isScrapingActive) {
-        throw new Error("Scraping stopped by the user");
+        throw new Error("Process stopped by the user");
       }
 
       try {
@@ -131,7 +138,7 @@ async function scrapeMarketplace() {
         if (productElements.length === 0) {
           retryCount++;
           if (retryCount >= MAX_RETRIES) {
-            console.log("Max retries reached. Stopping scrape.");
+            console.log("Max retries reached. Stopping Process.");
             break;
           }
           console.log(`No products found. Retry ${retryCount}/${MAX_RETRIES}`);
@@ -150,7 +157,7 @@ async function scrapeMarketplace() {
           noNewProductsCount++;
           if (noNewProductsCount >= MAX_RETRIES) {
             console.log(
-              "No new products found after multiple attempts. Stopping scrape."
+              "No new products found after multiple attempts. Stopping process."
             );
             break;
           }
@@ -164,7 +171,7 @@ async function scrapeMarketplace() {
         allProducts = [...allProducts, ...newProducts];
         totalProductsScraped = allProducts.length;
 
-        console.log(`Total products scraped: ${totalProductsScraped}`);
+        console.log(`Total products Founded: ${totalProductsScraped}`);
 
         // Send partial results to background script
         chrome.runtime.sendMessage({
@@ -172,12 +179,7 @@ async function scrapeMarketplace() {
           payload: allProducts,
         });
 
-        if (totalProductsScraped >= MAX_PRODUCTS) {
-          console.log(
-            `Reached maximum number of products (${MAX_PRODUCTS}). Stopping scrape.`
-          );
-          break;
-        }
+        
       } catch (error) {
         console.error("Error during product extraction:", error);
         retryCount++;
@@ -190,7 +192,7 @@ async function scrapeMarketplace() {
     }
 
     console.log(
-      `Data extraction completed. Total products scraped: ${totalProductsScraped}`
+      `Data extraction completed. Total products Founded: ${totalProductsScraped}`
     );
     if (allProducts.length > 0) {
       console.log("Sample data extracted:", allProducts[0]);
@@ -202,7 +204,7 @@ async function scrapeMarketplace() {
       payload: allProducts,
     });
   } catch (error) {
-    console.error("Fatal error during extraction:", error);
+    console.error("Fatal error during process:", error);
     chrome.runtime.sendMessage({ action: "scrapeError", error: error.message });
   } finally {
     isScrapingActive = false;
