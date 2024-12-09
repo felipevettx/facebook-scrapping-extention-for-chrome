@@ -10,10 +10,13 @@
     "downloads",
     "scripting",
     "cookies",
-    "https://www.facebook.com/"
+    "https://www.facebook.com/",
+    "https://*.vettx.com/*"
   ],
   "host_permissions": [
-    "https://*.facebook.com/*", "https://www.facebook.com/marketplace/*"
+    "https://*.facebook.com/*",
+    "https://www.facebook.com/marketplace/*",
+    "https://*.vettx.com/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -23,8 +26,8 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://*.facebook.com/*", "<all_urls>"],
-      "js": ["content.js"]
+      "matches": ["https://*.facebook.com/*", "https://*.vettx.com/*"],
+      "js": ["content.js"],"run_at": "document_idle"
     }
   ]
 }
