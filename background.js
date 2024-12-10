@@ -9,7 +9,7 @@ function checkVettxLogin(retries = 3) {
       vettxTabId = tabs[0].id;
       sendCheckLoginMessage(retries);
     } else {
-      console.log('No se encontró una pestaña abierta de vettx');
+      console.log('No open Vettx tab was found');
       chrome.storage.local.set({ vettxLoggedIn: false });
     }
   });
@@ -29,16 +29,16 @@ function sendCheckLoginMessage(retriesLeft) {
       return;
     }
     if (response && response.isLoggedIn) {
-      console.log('Usuario logueado en vettx');
+      console.log('User logged into Vettx');
       chrome.storage.local.set({ vettxLoggedIn: true });
     } else {
-      console.log('Usuario no logueado en vettx');
+      console.log('User not logged into Vettx');
       chrome.storage.local.set({ vettxLoggedIn: false });
     }
   });
 }
 
-// Escuchar cuando el content script esté listo
+// Listen for when the content script is ready.
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "contentScriptReady" && sender.tab.url.includes('vettx.com')) {
     console.log("Vettx content script is ready");
@@ -47,7 +47,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
-// Verificar el login de vettx cuando se actualiza una pestaña
+// Check the Vettx login status when a tab is updated.
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status === 'complete') {
     if (tab.url.includes('facebook.com')) {
@@ -56,16 +56,16 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     } else if (tab.url.includes('vettx.com')) {
       console.log("Vettx tab updated, checking login");
       vettxTabId = tabId;
-      // Esperar un poco para asegurarse de que el content script se haya cargado
+      //Wait to ensure the content script has loaded.
       setTimeout(checkVettxLogin, 1000);
     }
   }
 });
 
-// Verificar el login de vettx periódicamente
+// Check the Vettx login status periodically
 setInterval(checkVettxLogin, 60000);
 
-// acá acaba la logica de auth vettx 
+
 let scrapedData = [];
 let isScrapingActive = false;
 let activeTabId = null;
@@ -84,7 +84,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     chrome.storage.local.set({ scrapedData: scrapedData });
     chrome.runtime.sendMessage({ action: "updatePopup", data: scrapedData });
 
-    // Mostrar un resumen detallado en la consola
+    // Show a detailed summary in the console.
     console.log("Scraped data summary:");
     console.log(`Total products scraped: ${scrapedData.length}`);
     console.log("Sample product:");
@@ -134,6 +134,5 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     activeTabId = tabId;
   }
 });
-
 
 

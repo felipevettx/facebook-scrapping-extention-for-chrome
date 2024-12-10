@@ -1,5 +1,5 @@
 console.log("Content script Loaded");
-//implementación de logica para saber si el usuario esta logueado en vettx
+//Implementation of logic to determine if the user is logged into Vettx
 chrome.runtime.sendMessage({ action: "contentScriptReady" });
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "checkVettxLogin") {
@@ -8,7 +8,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     console.log("Vettx login status:", isLoggedIn);
     sendResponse({ isLoggedIn });
   }
-  return true; // Mantiene el canal de mensajes abierto para respuesta asíncrona
+  return true; 
 });
 
 function checkVettxLogin() {
@@ -25,7 +25,7 @@ function checkVettxLogin() {
     console.log("Vettx login check result:", isLoggedIn);
     return isLoggedIn;
   } catch (error) {
-    console.error('Error al verificar el login de vettx:', error);
+    console.error('Error checking Vettx login:', error);
     return false;
   }
 }
@@ -34,7 +34,7 @@ function checkVettxLogin() {
 
 let isScrapingActive = false;
 let totalProductsScraped = 0;
-// const MAX_PRODUCTS = 500;
+
 const SCROLL_INTERVAL = 1500;
 const SCROLL_DISTANCE = Math.ceil(window.innerHeight * 0.7);
 const LOAD_DELAY = 3000;
@@ -88,7 +88,7 @@ function waitForElement(selectors, timeout = 30000) {
           )
         );
       } else {
-        setTimeout(checkElement, 300); //tiempo de espera entre verificaciones
+        setTimeout(checkElement, 300); //Time interval between checks.
       }
     }
 
@@ -145,7 +145,7 @@ async function scrapeMarketplace() {
 
   try {
     while (isScrapingActive) {
-      //logica para ver si se excede el limite de tiempo 
+      //Logic to check if the time limit is exceeded
 
       if (Date.now() - startTime >= MAX_TIME){
         console.log("TIme limit reached. Stopping scrape");
@@ -242,5 +242,4 @@ async function scrapeMarketplace() {
     isScrapingActive = false;
   }
 }
-
 

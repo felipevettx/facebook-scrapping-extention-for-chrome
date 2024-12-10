@@ -2,7 +2,7 @@ console.log("Popup script loaded");
 
 let isScrapingActive = false;
 
-//validación de login en facebook.
+//Facebook login validation.
 let loginStatus = false;
 chrome.cookies.get(
   { url: "https://www.facebook.com", name: "c_user" },
@@ -15,7 +15,7 @@ chrome.cookies.get(
       enableScrapeButton();
     } else {
       console.log("User not logged in");
-      alert("Debes estar logueado en facebook");
+      alert("You must be logged into Facebook");
       notfyUserTologin();
       disableScrapeButton();
     }
@@ -40,12 +40,12 @@ function disableScrapeButton() {
 function handleLoginSuccess(userId) {
   console.log("UserID:", userId);
 }
-//notificar al usuario que debe iniciar sesión:
+//Notify the user that they need to log in..
 
 function notfyUserTologin() {
   console.log("please log in to Facebook to use this extension");
   const outputElement = document.getElementById("output");
-  outputElement.textContent = "debes estar logueado en facebook para usar la extension"
+  outputElement.textContent = "You must be logged into Facebook to use the extension"
 }
 //validation if the user is logged on vettx
 
@@ -61,7 +61,7 @@ document.getElementById("scrapeButton").addEventListener("click", async () => {
       document.getElementById("scrapeButton").textContent = "Stop Scraping";
       document.getElementById("scrapeButton").classList.add("stop");
       isScrapingActive = true;
-      // Guarda el estado del botón
+      // save the button status
       chrome.storage.local.set({ isScrapingActive: true }, () => {
         if (chrome.runtime.lastError) {
           console.error(
@@ -82,7 +82,7 @@ document.getElementById("scrapeButton").addEventListener("click", async () => {
       document.getElementById("scrapeButton").textContent = "Extract Data";
       document.getElementById("scrapeButton").classList.remove("stop");
       isScrapingActive = false;
-      // Guarda el estado del botón
+      // safe the button status
       chrome.storage.local.set({ isScrapingActive: false }, () => {
         if (chrome.runtime.lastError) {
           console.error(
@@ -174,7 +174,7 @@ chrome.storage.local.get(["scrapedData", "isScrapingActive"], (result) => {
   }
 });
 
-//logica para auth vettx
+//Logic for Vettx authentication
 
 chrome.storage.local.get(['vettxLoggedIn'], function(result) {
   if (result.vettxLoggedIn) {
