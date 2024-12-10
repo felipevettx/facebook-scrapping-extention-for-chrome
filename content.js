@@ -1,4 +1,35 @@
 console.log("Content script Loaded");
+//implementación de logica para saber si el usuario esta logueado en vettx
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === "checkVettxLogin") {
+    console.log("Checking vettx login from content script");
+    const isLoggedIn = checkVettxLogin();
+    console.log("Vettx login status:", isLoggedIn);
+    sendResponse({ isLoggedIn });
+  }
+  return true; // Mantiene el canal de mensajes abierto para respuesta asíncrona
+});
+
+function checkVettxLogin() {
+  try {
+    const encodedData = localStorage.getItem('ba');
+    if (!encodedData) {
+      console.log("No 'ba' item found in localStorage");
+      return false;
+    }
+
+    const decodedData = atob(encodedData);
+    const userData = JSON.parse(decodedData);
+    const isLoggedIn = !!(userData && userData.token);
+    console.log("Vettx login check result:", isLoggedIn);
+    return isLoggedIn;
+  } catch (error) {
+    console.error('Error al verificar el login de vettx:', error);
+    return false;
+  }
+}
+
+
 
 let isScrapingActive = false;
 let totalProductsScraped = 0;
@@ -210,3 +241,5 @@ async function scrapeMarketplace() {
     isScrapingActive = false;
   }
 }
+
+

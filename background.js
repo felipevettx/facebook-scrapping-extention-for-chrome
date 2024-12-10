@@ -1,5 +1,47 @@
 console.log("Background script loaded");
+//auth in vettx
+function checkVettxLogin() {
+  console.log("Checking vettx login...");
+  chrome.tabs.query({ url: ["*://*.vettx.com/*", "*://vettx.com/*"] }, (tabs) => {
+    console.log("Vettx tabs found:", tabs.length);
+    if (tabs.length > 0) {
+      chrome.tabs.sendMessage(tabs[0].id, { action: "checkVettxLogin" }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.error("Error sending message:", chrome.runtime.lastError);
+          return;
+        }
+        if (response && response.isLoggedIn) {
+          console.log('Usuario logueado en vettx');
+          chrome.storage.local.set({ vettxLoggedIn: true });
+        } else {
+          console.log('Usuario no logueado en vettx');
+          chrome.storage.local.set({ vettxLoggedIn: false });
+        }
+      });
+    } else {
+      console.log('No se encontró una pestaña abierta de vettx');
+      chrome.storage.local.set({ vettxLoggedIn: false });
+    }
+  });
+}
 
+// Verificar el login de vettx cuando se actualiza una pestaña
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete') {
+    if (tab.url.includes('facebook.com')) {
+      console.log("Facebook tab updated, checking vettx login");
+      checkVettxLogin();
+    } else if (tab.url.includes('vettx.com')) {
+      console.log("Vettx tab updated, checking login");
+      checkVettxLogin();
+    }
+  }
+});
+
+// Verificar el login de vettx periódicamente
+setInterval(checkVettxLogin, 60000); // Verifica cada minuto
+
+// acá acaba la logica de auth vettx 
 let scrapedData = [];
 let isScrapingActive = false;
 let activeTabId = null;
@@ -68,3 +110,6 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     activeTabId = tabId;
   }
 });
+
+
+

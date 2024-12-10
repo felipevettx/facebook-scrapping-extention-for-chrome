@@ -173,3 +173,15 @@ chrome.storage.local.get(["scrapedData", "isScrapingActive"], (result) => {
     isScrapingActive = true;
   }
 });
+
+//logica para auth vettx
+
+chrome.storage.local.get(['vettxLoggedIn'], function(result) {
+  if (result.vettxLoggedIn) {
+    console.log('User is logged into vettx');
+    // Perform actions for logged-in user
+  } else {
+    console.log('User is not logged into vettx');
+    // Perform actions for logged-out user
+  }
+});
