@@ -1,8 +1,8 @@
 console.log("Content script Loaded");
 //Implementation of logic to determine if the user is logged into Vettx
-// Enviar mensaje al background script para verificar si el usuario está logueado en VETTX
+// Send a message to the background script to check if the user is logged in to VETTX
 chrome.runtime.sendMessage({ action: 'checkLogin' }, (response) => {
-  console.log("Mensaje enviado al background:", response.status);  // Verificar si el mensaje fue recibido
+  console.log("Message sent to the background:", response.status); 
 });
 
 

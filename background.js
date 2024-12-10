@@ -1,6 +1,6 @@
 console.log("Background script loaded");
 
-// Verificar si está logueado en VETTX
+// Check if logged into VETTX
 function checkIfLoggedIn() {
   chrome.tabs.query({}, (tabs) => {
     const vettxTab = tabs.find((tab) => tab.url && tab.url.includes("vettx.com"));
@@ -11,27 +11,27 @@ function checkIfLoggedIn() {
         func: () => localStorage.getItem("ba") !== null,
       }, (results) => {
         if (chrome.runtime.lastError) {
-          console.error("Error ejecutando script:", chrome.runtime.lastError);
+          console.error("Error executing script:", chrome.runtime.lastError);
           chrome.storage.local.set({ vettxLoggedIn: false });
         } else if (results && results[0]?.result) {
-          console.log("Usuario logueado en VETTX.");
+          console.log("User logged into VETTX.");
           chrome.storage.local.set({ vettxLoggedIn: true });
         } else {
-          console.log("Usuario no logueado en VETTX.");
+          console.log("User not logged into VETTX.");
           chrome.storage.local.set({ vettxLoggedIn: false });
         }
       });
     } else {
-      console.log("No se encontró una pestaña de VETTX abierta.");
+      console.log("No open VETTX tab found.");
       chrome.storage.local.set({ vettxLoggedIn: false });
     }
   });
 }
 
-// Listener para manejar mensajes del popup
+// Listener to handle messages from the popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "checkLogin") {
-    console.log("Verificando login en VETTX...");
+    console.log("Verifying login in VETTX...");
     checkIfLoggedIn();
     sendResponse({ status: "Checking login status" });
   }
@@ -46,14 +46,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sendResponse({ status: "Scraping stopped" });
   }
 
-  return true; // Permite respuestas asíncronas
+  return true; 
 });
 
 let scrapedData = [];
 let isScrapingActive = false;
 let activeTabId = null;
 
-// Función para iniciar scraping
+// Function to start scraping
 function startScraping() {
   isScrapingActive = true;
   scrapedData = [];
@@ -68,7 +68,7 @@ function startScraping() {
   });
 }
 
-// Función para detener scraping
+// Function to stop scraping
 function stopScraping() {
   isScrapingActive = false;
   if (activeTabId) {
