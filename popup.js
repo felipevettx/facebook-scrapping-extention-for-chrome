@@ -1,27 +1,66 @@
 console.log("Popup script loaded");
 
 let isScrapingActive = false;
+let isLoggedInFacebook = false;
+let isLoggedInVettx = false;
 
-//Facebook login validation.
-let loginStatus = false;
-chrome.cookies.get(
-  { url: "https://www.facebook.com", name: "c_user" },
-  (cookie) => {
-    console.log("Cookie retrieved:", cookie);
-    if (cookie) {
-      console.log("User is login on Facebook. ID:", cookie.value);
-      loginStatus = true;
-      handleLoginSuccess(cookie.value);
-      enableScrapeButton();
-    } else {
-      console.log("User not logged in");
-      alert("You must be logged into Facebook");
-      notfyUserTologin();
-      disableScrapeButton();
+document.addEventListener("DOMContentLoaded", () => {
+  // Verificar login en VETTX
+  chrome.runtime.sendMessage({ action: "checkLogin" }, (response) => {
+    if (chrome.runtime.lastError) {
+      console.error("Error comunicando con el background script:", chrome.runtime.lastError);
+      notifyUser("Error verifying VETTX login.");
+      return;
     }
+    console.log(response.status);
+
+    // Actualizar estado de login desde chrome.storage.local
+    chrome.storage.local.get(["vettxLoggedIn"], (result) => {
+      isLoggedInVettx = result.vettxLoggedIn || false;
+      updateButtonState();
+    });
+  });
+
+  // Verificar login en Facebook
+  chrome.cookies.get({ url: "https://www.facebook.com", name: "c_user" }, (cookie) => {
+    if (cookie) {
+      console.log("Usuario logueado en Facebook. ID:", cookie.value);
+      isLoggedInFacebook = true;
+    } else {
+      console.log("Usuario no logueado en Facebook.");
+      notifyUser("You must be logged into Facebook to use the extension.");
+    }
+    updateButtonState();
+  });
+
+  // Restaurar estado del scraping al abrir el popup
+  chrome.storage.local.get(["isScrapingActive"], (result) => {
+    isScrapingActive = result.isScrapingActive || false;
+    updateButtonState();
+  });
+});
+
+// Actualizar estado del botón
+function updateButtonState() {
+  const scrapeButton = document.getElementById("scrapeButton");
+  if (isLoggedInFacebook && isLoggedInVettx) {
+    enableScrapeButton();
+  } else {
+    disableScrapeButton();
   }
-);
-// if the User is logged, enable Button:
+
+  if (isScrapingActive) {
+    // Si el scraping está activo, cambiar el texto del botón y agregar la clase 'stop'
+    scrapeButton.textContent = "Stop Scraping";
+    scrapeButton.classList.add("stop");
+  } else {
+    // Si no está activo, dejar el texto como "Extract Data" y remover la clase 'stop'
+    scrapeButton.textContent = "Extract Data";
+    scrapeButton.classList.remove("stop");
+  }
+}
+
+// Habilitar botón
 function enableScrapeButton() {
   const scrapeButton = document.getElementById("scrapeButton");
   scrapeButton.disabled = false;
@@ -29,159 +68,42 @@ function enableScrapeButton() {
   scrapeButton.title = "";
 }
 
-// disabled the Button if the user is not logged:
+// Deshabilitar botón
 function disableScrapeButton() {
   const scrapeButton = document.getElementById("scrapeButton");
   scrapeButton.disabled = true;
   scrapeButton.style.opacity = "0.6";
-  scrapeButton.title = "Please, Login on facebook for use the extension";
+  scrapeButton.title = "Please, login to Facebook and VETTX to use the extension";
 }
-// success case of login
-function handleLoginSuccess(userId) {
-  console.log("UserID:", userId);
-}
-//Notify the user that they need to log in..
 
-function notfyUserTologin() {
-  console.log("please log in to Facebook to use this extension");
+// Mostrar notificaciones al usuario
+function notifyUser(message) {
+  console.log(message);
   const outputElement = document.getElementById("output");
-  outputElement.textContent = "You must be logged into Facebook to use the extension"
-}
-//validation if the user is logged on vettx
-
-
-///////// logic for the scraping button
-document.getElementById("scrapeButton").addEventListener("click", async () => {
-  console.log("Scrape button clicked");
-
-  try {
-    if (!isScrapingActive) {
-      document.getElementById("output").textContent =
-        "Extracting is starting. Please, wait...";
-      document.getElementById("scrapeButton").textContent = "Stop Scraping";
-      document.getElementById("scrapeButton").classList.add("stop");
-      isScrapingActive = true;
-      // save the button status
-      chrome.storage.local.set({ isScrapingActive: true }, () => {
-        if (chrome.runtime.lastError) {
-          console.error(
-            "Error setting isScrapingActive:",
-            chrome.runtime.lastError
-          );
-        }
-      });
-      chrome.runtime.sendMessage({ action: "startScraping" }, (response) => {
-        if (chrome.runtime.lastError) {
-          throw new Error("Background script not responding");
-        }
-        console.log("Start scraping response:", response);
-      });
-    } else {
-      document.getElementById("output").textContent =
-        "Stopping the extraction...";
-      document.getElementById("scrapeButton").textContent = "Extract Data";
-      document.getElementById("scrapeButton").classList.remove("stop");
-      isScrapingActive = false;
-      // safe the button status
-      chrome.storage.local.set({ isScrapingActive: false }, () => {
-        if (chrome.runtime.lastError) {
-          console.error(
-            "Error setting isScrapingActive:",
-            chrome.runtime.lastError
-          );
-        }
-      });
-      chrome.runtime.sendMessage({ action: "stopScraping" }, (response) => {
-        if (chrome.runtime.lastError) {
-          throw new Error("Background script not responding");
-        }
-        console.log("Stop scraping response:", response);
-      });
-    }
-  } catch (error) {
-    console.error("Error starting/stopping the extraction:", error);
-    document.getElementById("output").textContent =
-      "Error starting/stopping extraction. Make sure you are on a Facebook Marketplace page.";
-    document.getElementById("scrapeButton").textContent = "Extract Data";
-    document.getElementById("scrapeButton").classList.remove("stop");
-    isScrapingActive = false;
-    chrome.storage.local.set({ isScrapingActive: false });
-  }
-});
-
-function displayProductData(products) {
-  const outputElement = document.getElementById("output");
-  outputElement.innerHTML = "";
-
-  const productList = document.createElement("ul");
-  productList.style.listStyleType = "none";
-  productList.style.padding = "0";
-
-  products.slice(0, 5).forEach((product) => {
-    const listItem = document.createElement("li");
-    listItem.style.marginBottom = "10px";
-    listItem.style.borderBottom = "1px solid #ccc";
-    listItem.style.paddingBottom = "10px";
-
-    listItem.innerHTML = `
-      <strong>ID:</strong> ${product.id}<br>
-      <a href="${product.link}" target="_blank">Ver en Facebook</a>
-    `;
-
-    productList.appendChild(listItem);
-  });
-
-  outputElement.appendChild(productList);
-
-  const totalInfo = document.createElement("p");
-  totalInfo.textContent = `Total products scraped: ${products.length}`;
-  outputElement.appendChild(totalInfo);
-
-  if (products.length > 5) {
-    const moreInfo = document.createElement("p");
-    moreInfo.textContent = `... and ${
-      products.length - 5
-    } more products. Check the console for full data.`;
-    outputElement.appendChild(moreInfo);
-  }
+  outputElement.textContent = message;
 }
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log("Message received in popup:", message);
-  if (message.action === "updatePopup") {
-    if (message.error) {
-      document.getElementById("output").textContent = `Error: ${message.error}`;
-    } else {
-      displayProductData(message.data);
-    }
-    if (message.action !== "scrapePartialComplete") {
-      document.getElementById("scrapeButton").textContent = "Extract Data";
-      document.getElementById("scrapeButton").classList.remove("stop");
-      isScrapingActive = false;
-    }
-  }
-});
+// Lógica del botón de scraping
+document.getElementById("scrapeButton").addEventListener("click", () => {
+  const scrapeButton = document.getElementById("scrapeButton");
 
-// Check if there is data extracted when opening the popup
-chrome.storage.local.get(["scrapedData", "isScrapingActive"], (result) => {
-  if (result.scrapedData && result.scrapedData.length > 0) {
-    displayProductData(result.scrapedData);
-  }
-  if (result.isScrapingActive) {
-    document.getElementById("scrapeButton").textContent = "Stop Scraping";
-    document.getElementById("scrapeButton").classList.add("stop");
+  if (!isScrapingActive) {
+    document.getElementById("output").textContent = "Starting extraction. Please wait...";
     isScrapingActive = true;
-  }
-});
-
-//Logic for Vettx authentication
-
-chrome.storage.local.get(['vettxLoggedIn'], function(result) {
-  if (result.vettxLoggedIn) {
-    console.log('User is logged into vettx');
-    // Perform actions for logged-in user
+    scrapeButton.textContent = "Stop Scraping";
+    scrapeButton.classList.add("stop"); // Agregar la clase 'stop' cuando comienza el scraping
+    chrome.runtime.sendMessage({ action: "startScraping" });
+    
+    // Guardar estado de scraping
+    chrome.storage.local.set({ isScrapingActive: true });
   } else {
-    console.log('User is not logged into vettx');
-    // Perform actions for logged-out user
+    document.getElementById("output").textContent = "Stopping extraction...";
+    isScrapingActive = false;
+    scrapeButton.textContent = "Extract Data";
+    scrapeButton.classList.remove("stop"); // Remover la clase 'stop' cuando se detiene el scraping
+    chrome.runtime.sendMessage({ action: "stopScraping" });
+
+    // Guardar estado de scraping
+    chrome.storage.local.set({ isScrapingActive: false });
   }
 });

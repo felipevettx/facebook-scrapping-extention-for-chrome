@@ -1,35 +1,9 @@
 console.log("Content script Loaded");
 //Implementation of logic to determine if the user is logged into Vettx
-chrome.runtime.sendMessage({ action: "contentScriptReady" });
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === "checkVettxLogin") {
-    console.log("Checking vettx login from content script");
-    const isLoggedIn = checkVettxLogin();
-    console.log("Vettx login status:", isLoggedIn);
-    sendResponse({ isLoggedIn });
-  }
-  return true; 
+// Enviar mensaje al background script para verificar si el usuario está logueado en VETTX
+chrome.runtime.sendMessage({ action: 'checkLogin' }, (response) => {
+  console.log("Mensaje enviado al background:", response.status);  // Verificar si el mensaje fue recibido
 });
-
-function checkVettxLogin() {
-  try {
-    const encodedData = localStorage.getItem('ba');
-    if (!encodedData) {
-      console.log("No 'ba' item found in localStorage");
-      return false;
-    }
-
-    const decodedData = atob(encodedData);
-    const userData = JSON.parse(decodedData);
-    const isLoggedIn = !!(userData && userData.token);
-    console.log("Vettx login check result:", isLoggedIn);
-    return isLoggedIn;
-  } catch (error) {
-    console.error('Error checking Vettx login:', error);
-    return false;
-  }
-}
-
 
 
 let isScrapingActive = false;
@@ -242,4 +216,3 @@ async function scrapeMarketplace() {
     isScrapingActive = false;
   }
 }
-
