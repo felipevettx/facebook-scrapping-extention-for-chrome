@@ -1,29 +1,51 @@
 console.log("Background script loaded");
 //auth in vettx
-function checkVettxLogin() {
+let vettxTabId = null
+function checkVettxLogin(retries = 3) {
   console.log("Checking vettx login...");
   chrome.tabs.query({ url: ["*://*.vettx.com/*", "*://vettx.com/*"] }, (tabs) => {
     console.log("Vettx tabs found:", tabs.length);
     if (tabs.length > 0) {
-      chrome.tabs.sendMessage(tabs[0].id, { action: "checkVettxLogin" }, (response) => {
-        if (chrome.runtime.lastError) {
-          console.error("Error sending message:", chrome.runtime.lastError);
-          return;
-        }
-        if (response && response.isLoggedIn) {
-          console.log('Usuario logueado en vettx');
-          chrome.storage.local.set({ vettxLoggedIn: true });
-        } else {
-          console.log('Usuario no logueado en vettx');
-          chrome.storage.local.set({ vettxLoggedIn: false });
-        }
-      });
+      vettxTabId = tabs[0].id;
+      sendCheckLoginMessage(retries);
     } else {
       console.log('No se encontró una pestaña abierta de vettx');
       chrome.storage.local.set({ vettxLoggedIn: false });
     }
   });
 }
+
+function sendCheckLoginMessage(retriesLeft) {
+  chrome.tabs.sendMessage(vettxTabId, { action: "checkVettxLogin" }, (response) => {
+    if (chrome.runtime.lastError) {
+      console.error("Error sending message:", chrome.runtime.lastError);
+      if (retriesLeft > 0) {
+        console.log(`Retrying... (${retriesLeft} attempts left)`);
+        setTimeout(() => sendCheckLoginMessage(retriesLeft - 1), 1000);
+      } else {
+        console.log("Max retries reached. Unable to check vettx login.");
+        chrome.storage.local.set({ vettxLoggedIn: false });
+      }
+      return;
+    }
+    if (response && response.isLoggedIn) {
+      console.log('Usuario logueado en vettx');
+      chrome.storage.local.set({ vettxLoggedIn: true });
+    } else {
+      console.log('Usuario no logueado en vettx');
+      chrome.storage.local.set({ vettxLoggedIn: false });
+    }
+  });
+}
+
+// Escuchar cuando el content script esté listo
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === "contentScriptReady" && sender.tab.url.includes('vettx.com')) {
+    console.log("Vettx content script is ready");
+    vettxTabId = sender.tab.id;
+    checkVettxLogin();
+  }
+});
 
 // Verificar el login de vettx cuando se actualiza una pestaña
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
@@ -33,13 +55,15 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       checkVettxLogin();
     } else if (tab.url.includes('vettx.com')) {
       console.log("Vettx tab updated, checking login");
-      checkVettxLogin();
+      vettxTabId = tabId;
+      // Esperar un poco para asegurarse de que el content script se haya cargado
+      setTimeout(checkVettxLogin, 1000);
     }
   }
 });
 
 // Verificar el login de vettx periódicamente
-setInterval(checkVettxLogin, 60000); // Verifica cada minuto
+setInterval(checkVettxLogin, 60000);
 
 // acá acaba la logica de auth vettx 
 let scrapedData = [];

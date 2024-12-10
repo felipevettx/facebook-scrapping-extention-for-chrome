@@ -1,5 +1,6 @@
 console.log("Content script Loaded");
 //implementación de logica para saber si el usuario esta logueado en vettx
+chrome.runtime.sendMessage({ action: "contentScriptReady" });
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "checkVettxLogin") {
     console.log("Checking vettx login from content script");
