@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
   <head>
-    <title>Facebook Scraper Data</title>
+    <title>Facebook Listing cars Downloader</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta charset="UTF-8" />
     <link rel="stylesheet" href="./styles.css" />
@@ -14,15 +14,19 @@
       </style>
   </head>
   <body>
-    <div class="logo">
-      <img src="./images/logo.svg" alt="Vettx Logo" />
+    <div class="content">
+
+      <div class="logo">
+        <img src="./images/logo.svg" alt="Vettx Logo" />
+      </div>
+      <h1>Facebook Marketplace Scraper</h1>
+      <div>
+        <button id="scrapeButton" disabled>Extract Data</button>
+        <button id="openTabs">Open tabs</button>
+      </div>
+      
+      <pre id="output"></pre>
+      <script src="popup.js"></script>
     </div>
-    <h1>Facebook Marketplace Scraper</h1>
-    <div>
-      <button id="scrapeButton" disabled>Extract Data</button>
-    </div>
-    
-    <pre id="output"></pre>
-    <script src="popup.js"></script>
   </body>
 </html>
